@@ -1,7 +1,7 @@
 {
     "name": "Apero-Launcher",
     "preductname": "Apero Launcher",
-    "version": "2.0.5",
+    "version": "2.0.6",
     "description": "Launcher Mincraft pour le serveur Apero des bros",
     "main": "src/app.js",
     "author": {
