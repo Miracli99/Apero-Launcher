@@ -1,7 +1,7 @@
 {
     "name": "BelleBitt-Launcher",
     "preductname": "BelleBit Launcher",
-    "version": "2.0.9",
+    "version": "2.0.10",
     "description": "Launcher Mincraft pour le serveur BelleBitt",
     "main": "src/app.js",
     "author": {
@@ -11,8 +11,8 @@
     },
     "url": "https://www.miracli.ch/apero",
     "scripts": {
-        "start": "cross-env-shell NODE_ENV=dev electron .",
-        "dev": "cross-env-shell DEV_TOOL=open nodemon --exec npm start",
+        "start": "set NODE_ENV=dev && electron .",
+        "dev": "set DEV_TOOL=open && nodemon --exec npm start",
         "build": "node build.js --obf=true --build=platform",
         "icon": "node build.js --icon=https://raw.githubusercontent.com/Miracli99/Apero-Launcher/refs/heads/master/src/assets/images/icon.png"
     },
@@ -22,6 +22,7 @@
         "ignore": "**/test"
     },
     "dependencies": {
+        "cross-env-shell": "^7.0.3",
         "electron-updater": "^6.1.8",
         "minecraft-java-core": "^4.1.4",
         "node-bdd": "^2.0.4",
