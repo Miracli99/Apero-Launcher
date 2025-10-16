@@ -6,6 +6,7 @@ import { config, database, logger, changePanel, appdata, setStatus, pkg, popup }
 
 const { Launch } = require('minecraft-java-core')
 const { shell, ipcRenderer } = require('electron')
+const path = require('path')
 
 class Home {
     static id = "home";
@@ -209,11 +210,15 @@ class Home {
         let infoStarting = document.querySelector(".info-starting-game-text")
         let progressBar = document.querySelector('.progress-bar')
 
+        const appDataPath = await appdata();
+        const dataDirectoryName = process.platform === 'darwin' ? this.config.dataDirectory : `.${this.config.dataDirectory}`;
+        const instancePath = path.join(appDataPath, dataDirectoryName);
+
         let opt = {
             url: options.url,
             authenticator: authenticator,
             timeout: 10000,
-            path: `${await appdata()}/${process.platform == 'darwin' ? this.config.dataDirectory : `.${this.config.dataDirectory}`}`,
+            path: instancePath,
             instance: options.name,
             version: options.loadder.minecraft_version,
             detached: configClient.launcher_config.closeLauncher == "close-all" ? false : true,
