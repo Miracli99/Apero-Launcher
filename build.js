@@ -6,7 +6,8 @@ const nodeFetch = require('node-fetch')
 const png2icons = require('png2icons');
 const Jimp = require('jimp');
 
-const { preductname } = require('./package.json');
+const { productName, name } = require('./package.json');
+const appName = productName ?? name;
 
 class Index {
     async init() {
@@ -63,8 +64,8 @@ class Index {
         builder.build({
             config: {
                 generateUpdatesFilesForAllChannels: false,
-                appId: preductname,
-                productName: preductname,
+                appId: appName,
+                productName: appName,
                 copyright: 'Copyright © 2020-2024 Luuxis',
                 artifactName: "${productName}-${os}-${arch}.${ext}",
                 extraMetadata: { main: 'app/app.js' },

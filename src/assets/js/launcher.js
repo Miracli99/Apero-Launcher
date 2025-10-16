@@ -243,13 +243,14 @@ class Launcher {
                 if (uuid) {
                     configClient.account_selected = uuid
                     await this.db.updateData('configClient', configClient)
-                    accountSelect(uuid)
+                    const selectedAccount = accounts.find(account => account.ID === uuid)
+                    if (selectedAccount) accountSelect(selectedAccount)
                 }
             }
 
             if (!accounts.length) {
-                config.account_selected = null
-                await this.db.updateData('configClient', config);
+                configClient.account_selected = null
+                await this.db.updateData('configClient', configClient);
                 popupRefresh.closePopup()
                 return changePanel("login");
             }

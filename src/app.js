@@ -30,21 +30,27 @@ else app.whenReady().then(() => {
     UpdateWindow.createWindow()
 });
 
+const withWindow = (getter, callback) => {
+    const win = getter();
+    if (!win) return;
+    callback(win);
+};
+
 ipcMain.on('main-window-open', () => MainWindow.createWindow())
-ipcMain.on('main-window-dev-tools', () => MainWindow.getWindow().webContents.openDevTools({ mode: 'detach' }))
-ipcMain.on('main-window-dev-tools-close', () => MainWindow.getWindow().webContents.closeDevTools())
+ipcMain.on('main-window-dev-tools', () => withWindow(() => MainWindow.getWindow(), (win) => win.webContents.openDevTools({ mode: 'detach' })))
+ipcMain.on('main-window-dev-tools-close', () => withWindow(() => MainWindow.getWindow(), (win) => win.webContents.closeDevTools()))
 ipcMain.on('main-window-close', () => MainWindow.destroyWindow())
-ipcMain.on('main-window-reload', () => MainWindow.getWindow().reload())
-ipcMain.on('main-window-progress', (event, options) => MainWindow.getWindow().setProgressBar(options.progress / options.size))
-ipcMain.on('main-window-progress-reset', () => MainWindow.getWindow().setProgressBar(-1))
-ipcMain.on('main-window-progress-load', () => MainWindow.getWindow().setProgressBar(2))
-ipcMain.on('main-window-minimize', () => MainWindow.getWindow().minimize())
+ipcMain.on('main-window-reload', () => withWindow(() => MainWindow.getWindow(), (win) => win.reload()))
+ipcMain.on('main-window-progress', (event, options) => withWindow(() => MainWindow.getWindow(), (win) => win.setProgressBar(options.progress / options.size)))
+ipcMain.on('main-window-progress-reset', () => withWindow(() => MainWindow.getWindow(), (win) => win.setProgressBar(-1)))
+ipcMain.on('main-window-progress-load', () => withWindow(() => MainWindow.getWindow(), (win) => win.setProgressBar(2)))
+ipcMain.on('main-window-minimize', () => withWindow(() => MainWindow.getWindow(), (win) => win.minimize()))
 
 ipcMain.on('update-window-close', () => UpdateWindow.destroyWindow())
-ipcMain.on('update-window-dev-tools', () => UpdateWindow.getWindow().webContents.openDevTools({ mode: 'detach' }))
-ipcMain.on('update-window-progress', (event, options) => UpdateWindow.getWindow().setProgressBar(options.progress / options.size))
-ipcMain.on('update-window-progress-reset', () => UpdateWindow.getWindow().setProgressBar(-1))
-ipcMain.on('update-window-progress-load', () => UpdateWindow.getWindow().setProgressBar(2))
+ipcMain.on('update-window-dev-tools', () => withWindow(() => UpdateWindow.getWindow(), (win) => win.webContents.openDevTools({ mode: 'detach' })))
+ipcMain.on('update-window-progress', (event, options) => withWindow(() => UpdateWindow.getWindow(), (win) => win.setProgressBar(options.progress / options.size)))
+ipcMain.on('update-window-progress-reset', () => withWindow(() => UpdateWindow.getWindow(), (win) => win.setProgressBar(-1)))
+ipcMain.on('update-window-progress-load', () => withWindow(() => UpdateWindow.getWindow(), (win) => win.setProgressBar(2)))
 
 ipcMain.handle('path-user-data', () => app.getPath('userData'))
 ipcMain.handle('appData', e => app.getPath('appData'))
