@@ -7,6 +7,7 @@ const { app, BrowserWindow, Menu } = require("electron");
 const path = require("path");
 const os = require("os");
 const pkg = require("../../../../package.json");
+const windowTitle = pkg.productName ?? pkg.name;
 let dev = process.env.DEV_TOOL === 'open';
 let mainWindow = undefined;
 
@@ -23,7 +24,7 @@ function destroyWindow() {
 function createWindow() {
     destroyWindow();
     mainWindow = new BrowserWindow({
-        title: pkg.preductname,
+        title: windowTitle,
         width: 1280,
         height: 720,
         minWidth: 980,
