@@ -7,6 +7,8 @@ const { ipcRenderer } = require('electron');
 
 import { popup, database, changePanel, accountSelect, addAccount, config, setStatus } from '../utils.js';
 
+const MICROSOFT_FALLBACK_CLIENT_ID = '00000000402b5328';
+
 class Login {
     static id = "login";
     async init(config) {
@@ -35,13 +37,14 @@ class Login {
         loginHome.style.display = 'block';
 
         microsoftBtn.addEventListener("click", () => {
+            const clientId = this.config?.client_id ?? MICROSOFT_FALLBACK_CLIENT_ID;
             popupLogin.openPopup({
                 title: 'Connexion',
                 content: 'Veuillez patienter...',
                 color: 'var(--color)'
             });
 
-            ipcRenderer.invoke('Microsoft-window', this.config.client_id).then(async account_connect => {
+            ipcRenderer.invoke('Microsoft-window', clientId).then(async account_connect => {
                 if (account_connect == 'cancel' || !account_connect) {
                     popupLogin.closePopup();
                     return;
@@ -192,6 +195,10 @@ class Login {
     }
 
     async saveData(connectionData) {
+        if (connectionData?.meta?.type === 'Xbox') {
+            const clientId = this.config?.client_id ?? MICROSOFT_FALLBACK_CLIENT_ID;
+            connectionData.meta = { ...connectionData.meta, client_id: clientId };
+        }
         let configClient = await this.db.readData('configClient');
         let account = await this.db.createData('accounts', connectionData)
         let instanceSelect = configClient.instance_selct

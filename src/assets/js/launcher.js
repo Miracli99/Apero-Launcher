@@ -16,6 +16,8 @@ const { ipcRenderer } = require('electron');
 const fs = require('fs');
 const os = require('os');
 
+const MICROSOFT_FALLBACK_CLIENT_ID = '00000000402b5328';
+
 class Launcher {
     async init() {
         this.initLog();
@@ -142,6 +144,7 @@ class Launcher {
                     continue
                 }
                 if (account.meta.type === 'Xbox') {
+                    const clientId = account.meta?.client_id ?? this.config?.client_id ?? MICROSOFT_FALLBACK_CLIENT_ID;
                     console.log(`Account Type: ${account.meta.type} | Username: ${account.name}`);
                     popupRefresh.openPopup({
                         title: 'Connexion',
@@ -150,7 +153,7 @@ class Launcher {
                         background: false
                     });
 
-                    let refresh_accounts = await new Microsoft(this.config.client_id).refresh(account);
+                    let refresh_accounts = await new Microsoft(clientId).refresh(account);
 
                     if (refresh_accounts.error) {
                         await this.db.deleteData('accounts', account_ID)
@@ -163,6 +166,7 @@ class Launcher {
                     }
 
                     refresh_accounts.ID = account_ID
+                    refresh_accounts.meta = { ...refresh_accounts.meta, client_id: clientId }
                     await this.db.updateData('accounts', refresh_accounts, account_ID)
                     await addAccount(refresh_accounts)
                     if (account_ID == account_selected) accountSelect(refresh_accounts)
