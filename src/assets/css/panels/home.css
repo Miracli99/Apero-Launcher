@@ -1,10 +1,19 @@
+.home {
+    --home-gap: clamp(14px, 1.8vw, 24px);
+    --home-padding: clamp(24px, 3vw, 44px);
+    --card-padding: clamp(14px, 2vw, 22px);
+    --card-radius: 18px;
+    --card-gap: clamp(10px, 1.5vw, 18px);
+    --section-title-size: clamp(1.05rem, 0.6vw + 0.9rem, 1.25rem);
+}
+
 .home .container {
     display: flex;
     height: 100%;
     flex-direction: column;
     align-items: center;
-    gap: 18px;
-    padding: 32px 36px;
+    gap: var(--home-gap);
+    padding: var(--home-padding);
     background: linear-gradient(145deg, rgba(255, 255, 255, 0.03), rgba(139, 92, 246, 0.08));
 }
 
@@ -20,29 +29,29 @@
     justify-content: space-between;
     align-items: center;
     background: linear-gradient(120deg, rgba(255, 255, 255, 0.07), rgba(139, 92, 246, 0.12));
-    width: min(440px, 100%);
-    min-height: 4rem;
+    width: min(34vw, 480px);
+    min-height: clamp(3.6rem, 4vw, 4.2rem);
     color: var(--color);
     border-radius: 16px;
-    padding: 0.85rem 1.1rem;
+    padding: clamp(0.75rem, 1vw, 1rem) clamp(1rem, 1.6vw, 1.25rem);
     text-align: center;
     box-shadow: var(--shadow);
     border: 1px solid rgba(255, 255, 255, 0.07);
 }
 
 .server-status-icon {
-    height: 3.1rem;
+    height: clamp(2.6rem, 4vw, 3.1rem);
     filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.22));
 }
 
 .server-status-name {
-    font-size: 1.05rem;
+    font-size: clamp(0.95rem, 0.7vw + 0.8rem, 1.08rem);
     letter-spacing: 0.3px;
     color: var(--color);
 }
 
 .server-status-text {
-    font-size: 0.8rem;
+    font-size: clamp(0.75rem, 0.5vw + 0.6rem, 0.9rem);
     color: #a5f3fc;
     letter-spacing: 0.2px;
 }
@@ -53,16 +62,16 @@
 
 .status-player-count {
     background: rgba(255, 255, 255, 0.08);
-    min-width: 3rem;
-    height: 3rem;
+    min-width: clamp(2.6rem, 3vw, 3.2rem);
+    height: clamp(2.6rem, 3vw, 3.2rem);
     border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
 .player-count {
-    font-size: 1.2rem;
-    margin: 0.55rem 0.55rem;
+    font-size: clamp(1.05rem, 0.5vw + 1rem, 1.2rem);
+    margin: clamp(0.4rem, 0.6vw, 0.6rem);
 }
 
 .status-player-count:after {
@@ -86,7 +95,7 @@
     width: 100%;
     display: grid;
     grid-template-columns: 2fr 1fr;
-    gap: 18px;
+    gap: var(--home-gap);
     align-items: stretch;
     flex: 1;
 }
@@ -105,15 +114,15 @@
     height: 100%;
     background: var(--background-transparent);
     border-radius: 20px;
-    padding: 18px 20px;
+    padding: var(--card-padding);
     box-shadow: var(--shadow);
     border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .titre-tab-new {
     margin-top: 0.35rem;
-    font-size: 1.25rem;
-    padding: 0.55rem 1.2rem;
+    font-size: var(--section-title-size);
+    padding: clamp(0.45rem, 0.8vw, 0.65rem) clamp(1rem, 1.8vw, 1.35rem);
     border-radius: 14px;
     background: rgba(255, 255, 255, 0.05);
     color: var(--color);
@@ -124,13 +133,13 @@
     width: 100%;
     height: 100%;
     border-radius: 14px;
-    margin: 1rem 0;
+    margin: clamp(0.75rem, 1.4vw, 1.25rem) 0;
     overflow: hidden;
 }
 
 .news-block {
     width: 100%;
-    margin: 0 0 0.8rem 0;
+    margin: 0 0 clamp(0.6rem, 1vw, 1rem) 0;
     border-radius: 14px;
     background: linear-gradient(140deg, rgba(255, 255, 255, 0.06), rgba(139, 92, 246, 0.1));
     border: 1px solid rgba(255, 255, 255, 0.08);
@@ -140,12 +149,12 @@
 .news-header {
     display: flex;
     justify-content: space-between;
-    padding: 0.85rem 1.25rem;
+    padding: clamp(0.65rem, 1vw, 0.9rem) clamp(1rem, 1.4vw, 1.3rem);
     align-items: center;
 }
 
 .header-text .title {
-    font-size: 1.05rem;
+    font-size: clamp(0.95rem, 0.6vw + 0.85rem, 1.1rem);
     text-align: center;
     letter-spacing: 0.2px;
     color: var(--color);
@@ -158,9 +167,9 @@
 }
 
 .news-content .bbWrapper {
-    padding: 0 1.25rem;
-    padding-bottom: 0.85rem;
-    font-size: 0.95rem;
+    padding: 0 clamp(0.95rem, 1.6vw, 1.35rem);
+    padding-bottom: clamp(0.7rem, 1vw, 0.9rem);
+    font-size: clamp(0.9rem, 0.4vw + 0.85rem, 1rem);
 
 }
 
@@ -171,9 +180,9 @@
 }
 
 .news-content .bbWrapper .news-author {
-    margin-top: 0.8rem;
+    margin-top: clamp(0.6rem, 1vw, 0.95rem);
     text-align: end;
-    font-size: 0.82rem;
+    font-size: clamp(0.78rem, 0.3vw + 0.74rem, 0.88rem);
 }
 
 .news-content .bbWrapper .news-author span {
@@ -190,17 +199,17 @@
     position: relative;
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: var(--card-gap);
     width: 100%;
     height: 100%;
     justify-content: flex-start;
 }
 
 .social-list {
-    border-radius: 18px;
+    border-radius: var(--card-radius);
     height: 100%;
     background: var(--background-transparent);
-    padding: 10px;
+    padding: clamp(10px, 1.5vw, 14px);
     box-shadow: var(--shadow);
     border: 1px solid rgba(255, 255, 255, 0.08);
 }
@@ -208,11 +217,11 @@
 .social-block {
     display: flex;
     background: linear-gradient(160deg, rgba(255, 255, 255, 0.07), rgba(99, 102, 241, 0.15));
-    width: 90px;
-    height: 90px;
-    margin-bottom: 1rem;
+    width: clamp(78px, 8vw, 96px);
+    height: clamp(78px, 8vw, 96px);
+    margin-bottom: clamp(0.75rem, 1vw, 1.1rem);
     border-radius: 16px;
-    font-size: 2rem;
+    font-size: clamp(1.6rem, 2vw, 2.2rem);
     cursor: pointer;
     align-items: center;
     justify-content: center;
@@ -239,10 +248,10 @@
     justify-content: space-between;
     align-items: center;
     width: 100%;
-    min-height: 88px;
+    min-height: clamp(76px, 8vw, 92px);
     background: rgba(255, 255, 255, 0.05);
     border-radius: 18px;
-    padding: 10px 18px;
+    padding: clamp(10px, 1.4vw, 14px) clamp(14px, 2vw, 20px);
     box-shadow: var(--shadow);
     border: 1px solid rgba(255, 255, 255, 0.06);
     margin-top: auto;
@@ -253,8 +262,8 @@
     justify-content: space-between;
     align-items: center;
     border-radius: 15px;
-    height: 3rem;
-    margin: 0 1rem;
+    height: clamp(2.7rem, 4vw, 3.2rem);
+    margin: 0 clamp(0.8rem, 1.8vw, 1.2rem);
 }
 
 .player-head {
@@ -262,8 +271,8 @@
     background-size: cover;
     image-rendering: pixelated;
     transition: var(--transition);
-    height: 3.2rem;
-    width: 3.2rem;
+    height: clamp(2.8rem, 4vw, 3.4rem);
+    width: clamp(2.8rem, 4vw, 3.4rem);
     pointer-events: none;
     border-radius: 12px;
     box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.14);
@@ -288,8 +297,8 @@
     position: relative;
     border: solid 2px rgba(255, 255, 255, 0.1);
     border-radius: 16px;
-    height: 3.4rem;
-    padding-right: 2.4rem;
+    height: clamp(3.1rem, 4vw, 3.5rem);
+    padding-right: clamp(2rem, 2.6vw, 2.6rem);
     background: linear-gradient(120deg, rgba(255, 255, 255, 0.05), rgba(139, 92, 246, 0.15));
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
@@ -299,9 +308,9 @@
     border-radius: 12px;
     background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
     color: #0b1021;
-    font-size: 1.2rem;
+    font-size: clamp(1.05rem, 0.6vw + 1rem, 1.25rem);
     font-weight: 800;
-    padding: 0.55rem 1.4rem;
+    padding: clamp(0.45rem, 0.8vw, 0.65rem) clamp(1.2rem, 1.8vw, 1.6rem);
     pointer-events: none;
     box-shadow: 0 12px 28px rgba(99, 102, 241, 0.32);
 }
@@ -313,12 +322,12 @@
     right: -3;
     top: -2;
     color: var(--element-color);
-    font-size: 1.1rem;
+    font-size: clamp(1rem, 0.5vw + 0.95rem, 1.15rem);
     height: calc(100% - 6px);
     border: solid 2px rgba(255, 255, 255, 0.16);
     text-align: center;
     border-radius: 14px;
-    padding: 0 0.6rem;
+    padding: 0 clamp(0.5rem, 0.8vw, 0.75rem);
     cursor: pointer;
     background: rgba(255, 255, 255, 0.06);
 }
@@ -335,8 +344,8 @@
 
 .progress-bar {
     appearance: none;
-    height: 10px;
-    margin: 0.5rem 0;
+    height: clamp(8px, 1vw, 12px);
+    margin: clamp(0.35rem, 0.8vw, 0.6rem) 0;
 }
 
 .progress-bar::-webkit-progress-bar {
@@ -351,11 +360,11 @@
 }
 
 .settings-btn {
-    width: 3rem;
-    height: 3rem;
-    font-size: 2.6rem;
+    width: clamp(2.6rem, 3vw, 3.2rem);
+    height: clamp(2.6rem, 3vw, 3.2rem);
+    font-size: clamp(2.2rem, 1vw + 2rem, 2.6rem);
     color: var(--element-color);
-    margin: 0 1rem;
+    margin: 0 clamp(0.8rem, 1.6vw, 1.2rem);
     display: grid;
     place-items: center;
     background: rgba(255, 255, 255, 0.06);
