@@ -1,22 +1,27 @@
 .settings .container {
     display: flex;
     height: 100%;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.03), rgba(99, 102, 241, 0.08));
+    border-radius: var(--panel-radius);
+    overflow: hidden;
 }
 
 .nav-settings {
-    width: 20%;
+    width: 22%;
     height: 100%;
-    background: var(--background);
+    background: rgba(255, 255, 255, 0.06);
     display: flex;
     align-items: center;
     flex-direction: column;
     justify-content: center;
-    font-size: 2.5rem;
+    font-size: 2.1rem;
+    box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.08);
 }
 
 .nav-settings p {
     font-size: 60%;
-    margin-top: 80px;
+    margin-top: 60px;
+    letter-spacing: 0.5px;
 }
 
 .nav-box {
@@ -27,23 +32,30 @@
 }
 
 .nav-box #save {
-    border: solid 4px var(--background-element);
-    margin: 3rem;
+    border: solid 2px transparent;
+    background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+    color: #0b1021;
+    margin: 3rem 0 1rem 0;
+    box-shadow: 0 14px 30px rgba(99, 102, 241, 0.35);
 }
 
 .nav-settings-btn {
     font-size: 50%;
-    border: solid 4px var(--element-color);
-    padding: 5px 10px;
-    border-radius: 10px;
-    width: 70%;
+    border: solid 1px rgba(255, 255, 255, 0.12);
+    padding: 10px 14px;
+    border-radius: 12px;
+    width: 75%;
     text-align: center;
-    margin: 0.5rem 0;
+    margin: 0.4rem 0;
     cursor: pointer;
+    background: rgba(255, 255, 255, 0.04);
+    transition: var(--transition);
 }
 
 .active-settings-BTN {
-    background: var(--element-color);
+    background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+    color: #0b1021;
+    box-shadow: 0 12px 25px rgba(99, 102, 241, 0.35);
 }
 
 .container-settings {
@@ -52,23 +64,27 @@
     flex-direction: column;
     align-items: center;
     right: 0;
-    width: 80%;
+    width: 78%;
     height: calc(100% - 26px);
     opacity: 0;
     pointer-events: none;
+    padding: 22px 18px;
 
 }
 
 .settings-elements-box {
     background: var(--background-element);
-    width: 80%;
-    border-radius: 10px;
-    padding: 1.5rem 2rem;
-    margin: 0.5rem;
+    width: 88%;
+    border-radius: 16px;
+    padding: 1.6rem 2rem;
+    margin: 0.7rem;
+    box-shadow: var(--shadow);
+    border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .setting-text {
-    font-size: 0.8rem;
+    font-size: 0.9rem;
+    line-height: 1.5;
 }
 
 .active-container-settings {
@@ -81,13 +97,14 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 2rem;
-    margin: 1.5rem 0;
-    padding: 0.5rem 2rem;
-    border-radius: 2rem;
+    font-size: 1.5rem;
+    margin: 1.2rem 0;
+    padding: 0.7rem 1.8rem;
+    border-radius: 14px;
     text-align: center;
-    background: var(--background-transparent);
+    background: rgba(255, 255, 255, 0.05);
     color: var(--color);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
 .settings-elements {
@@ -119,19 +136,21 @@
 }
 
 .account {
-    background: var(--background-element);
-    border: solid 4px var(--background-element);
+    background: linear-gradient(140deg, rgba(255, 255, 255, 0.08), rgba(99, 102, 241, 0.12));
+    border: solid 1px rgba(255, 255, 255, 0.1);
     display: flex;
     justify-content: space-around;
     align-items: center;
     width: calc(400px - 8px);
-    height: calc(100px - 8px);
+    height: calc(110px - 8px);
     margin: 1rem;
-    border-radius: 15px;
+    border-radius: 16px;
+    box-shadow: 0 18px 36px rgba(0, 0, 0, 0.18);
 }
 
 .account-select {
-    border: solid 4px var(--element-color);
+    border: solid 2px var(--element-color);
+    box-shadow: 0 10px 28px rgba(99, 102, 241, 0.25);
 }
 
 .accounts-list #add {
@@ -159,9 +178,10 @@
     height: 70px;
     background: url(../../images/default/setve.png);
     background-size: cover;
-    border-radius: 15px;
+    border-radius: 14px;
     pointer-events: none;
     image-rendering: pixelated;
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.14);
 }
 
 .profile-infos {
@@ -175,7 +195,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 1.5rem;
+    font-size: 1.4rem;
     pointer-events: none;
 
 }
@@ -191,14 +211,15 @@
 .delete-profile {
     width: 70px;
     height: 70px;
-    background: var(--background-transparent);
-    border-radius: 15px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
     font-size: 3rem;
     display: flex;
     justify-content: center;
     align-items: center;
     color: #ff2c2c;
     cursor: pointer;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
 .delete-profile-icon {
