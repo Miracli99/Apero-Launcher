@@ -3,15 +3,21 @@
     align-items: center;
     justify-content: center;
     height: 100%;
+    background: radial-gradient(circle at 20% 20%, rgba(99, 102, 241, 0.12), transparent 45%),
+        radial-gradient(circle at 80% 10%, rgba(139, 92, 246, 0.14), transparent 38%);
 }
 
 .login-tabs {
     position: absolute;
-    padding: 15px;
-    background: var(--background);
-    border-radius: 15px;
+    padding: 24px 28px;
+    background: var(--background-transparent);
+    border-radius: 22px;
     text-align: center;
-    min-width: 40%;
+    min-width: 42%;
+    box-shadow: var(--shadow);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: var(--blur);
+    -webkit-backdrop-filter: var(--blur);
 }
 
 .login-home,
@@ -22,29 +28,33 @@
 }
 
 .login-text {
-    font-size: 1.3rem;
+    font-size: 1.4rem;
+    margin-bottom: 0.8rem;
 }
 
 .connect,
 .cancel {
-    background: none;
-    color: var(--color);
-    border: solid 4px var(--element-color);
-    border-radius: 10px;
-    padding: 0.3rem 4rem;
-    font-size: inherit;
-    font-weight: bold;
+    background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+    color: #0b1021;
+    border: none;
+    border-radius: 12px;
+    padding: 0.6rem 2.4rem;
+    font-size: 1rem;
+    font-weight: 800;
     margin: 15px 10px;
+    box-shadow: 0 12px 30px rgba(99, 102, 241, 0.35);
+    cursor: pointer;
 }
 
 .input-login .email,
 .input-login .password,
 .A2F {
     color: var(--color);
-    background: none;
-    border: solid 2px var(--element-color);
-    border-radius: 30px;
-    width: 50%;
-    padding: 0.4rem 1rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: solid 1px rgba(255, 255, 255, 0.15);
+    border-radius: 16px;
+    width: 60%;
+    padding: 0.7rem 1rem;
     margin-top: 10px;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
