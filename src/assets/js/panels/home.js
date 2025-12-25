@@ -199,146 +199,165 @@ class Home {
     }
 
     async startGame() {
-        let launch = new Launch()
-        let configClient = await this.db.readData('configClient')
-        let instance = await config.getInstanceList()
-        let authenticator = await this.db.readData('accounts', configClient.account_selected)
-        let options = instance.find(i => i.name == configClient.instance_selct)
+        let playInstanceBTN = document.querySelector('.play-instance');
+        let infoStartingBOX = document.querySelector('.info-starting-game');
+        let infoStarting = document.querySelector(".info-starting-game-text");
+        let progressBar = document.querySelector('.progress-bar');
+        const launch = new Launch();
 
-        let playInstanceBTN = document.querySelector('.play-instance')
-        let infoStartingBOX = document.querySelector('.info-starting-game')
-        let infoStarting = document.querySelector(".info-starting-game-text")
-        let progressBar = document.querySelector('.progress-bar')
+        try {
+            let configClient = await this.db.readData('configClient');
+            let instance = await config.getInstanceList();
+            let authenticator = await this.db.readData('accounts', configClient.account_selected);
+            let options = instance.find(i => i.name == configClient.instance_selct);
 
-        const appDataPath = await appdata();
-        const dataDirectoryName = process.platform === 'darwin' ? this.config.dataDirectory : `.${this.config.dataDirectory}`;
-        const instancePath = path.join(appDataPath, dataDirectoryName);
-
-        let opt = {
-            url: options.url,
-            authenticator: authenticator,
-            timeout: 10000,
-            path: instancePath,
-            instance: options.name,
-            version: options.loadder.minecraft_version,
-            detached: configClient.launcher_config.closeLauncher == "close-all" ? false : true,
-            downloadFileMultiple: configClient.launcher_config.download_multi,
-            intelEnabledMac: configClient.launcher_config.intelEnabledMac,
-
-            loader: {
-                type: options.loadder.loadder_type,
-                build: options.loadder.loadder_version,
-                enable: options.loadder.loadder_type == 'none' ? false : true
-            },
-
-            verify: options.verify,
-
-            ignored: [...options.ignored],
-
-            java: {
-                path: configClient.java_config.java_path,
-            },
-
-            JVM_ARGS:  options.jvm_args ? options.jvm_args : [],
-            GAME_ARGS: options.game_args ? options.game_args : [],
-
-            screen: {
-                width: configClient.game_config.screen_size.width,
-                height: configClient.game_config.screen_size.height
-            },
-
-            memory: {
-                min: `${configClient.java_config.java_memory.min * 1024}M`,
-                max: `${configClient.java_config.java_memory.max * 1024}M`
+            if (!options) {
+                throw { error: `Instance "${configClient.instance_selct}" introuvable.` };
             }
-        }
 
-        launch.Launch(opt);
+            const appDataPath = await appdata();
+            const dataDirectoryName = process.platform === 'darwin' ? this.config.dataDirectory : `.${this.config.dataDirectory}`;
+            const instancePath = path.join(appDataPath, dataDirectoryName);
 
-        playInstanceBTN.style.display = "none"
-        infoStartingBOX.style.display = "block"
-        progressBar.style.display = "";
-        ipcRenderer.send('main-window-progress-load')
+            let opt = {
+                url: options.url,
+                authenticator: authenticator,
+                timeout: 30000,
+                path: instancePath,
+                instance: options.name,
+                version: options.loadder.minecraft_version,
+                detached: configClient.launcher_config.closeLauncher == "close-all" ? false : true,
+                downloadFileMultiple: configClient.launcher_config.download_multi,
+                intelEnabledMac: configClient.launcher_config.intelEnabledMac,
 
-        launch.on('extract', extract => {
+                loader: {
+                    type: options.loadder.loadder_type,
+                    build: options.loadder.loadder_version,
+                    enable: options.loadder.loadder_type == 'none' ? false : true
+                },
+
+                verify: options.verify,
+
+                ignored: [...options.ignored],
+
+                java: {
+                    path: configClient.java_config.java_path,
+                },
+
+                JVM_ARGS:  options.jvm_args ? options.jvm_args : [],
+                GAME_ARGS: options.game_args ? options.game_args : [],
+
+                screen: {
+                    width: configClient.game_config.screen_size.width,
+                    height: configClient.game_config.screen_size.height
+                },
+
+                memory: {
+                    min: `${configClient.java_config.java_memory.min * 1024}M`,
+                    max: `${configClient.java_config.java_memory.max * 1024}M`
+                }
+            }
+
+            playInstanceBTN.style.display = "none"
+            infoStartingBOX.style.display = "block"
+            progressBar.style.display = "";
             ipcRenderer.send('main-window-progress-load')
-            console.log(extract);
-        });
 
-        launch.on('progress', (progress, size) => {
-            infoStarting.innerHTML = `Téléchargement ${((progress / size) * 100).toFixed(0)}%`
-            ipcRenderer.send('main-window-progress', { progress, size })
-            progressBar.value = progress;
-            progressBar.max = size;
-        });
+            launch.on('extract', extract => {
+                ipcRenderer.send('main-window-progress-load')
+                console.log(extract);
+            });
 
-        launch.on('check', (progress, size) => {
-            infoStarting.innerHTML = `Vérification ${((progress / size) * 100).toFixed(0)}%`
-            ipcRenderer.send('main-window-progress', { progress, size })
-            progressBar.value = progress;
-            progressBar.max = size;
-        });
+            launch.on('progress', (progress, size) => {
+                infoStarting.innerHTML = `Téléchargement ${((progress / size) * 100).toFixed(0)}%`
+                ipcRenderer.send('main-window-progress', { progress, size })
+                progressBar.value = progress;
+                progressBar.max = size;
+            });
 
-        launch.on('estimated', (time) => {
-            let hours = Math.floor(time / 3600);
-            let minutes = Math.floor((time - hours * 3600) / 60);
-            let seconds = Math.floor(time - hours * 3600 - minutes * 60);
-            console.log(`${hours}h ${minutes}m ${seconds}s`);
-        })
+            launch.on('check', (progress, size) => {
+                infoStarting.innerHTML = `Vérification ${((progress / size) * 100).toFixed(0)}%`
+                ipcRenderer.send('main-window-progress', { progress, size })
+                progressBar.value = progress;
+                progressBar.max = size;
+            });
 
-        launch.on('speed', (speed) => {
-            console.log(`${(speed / 1067008).toFixed(2)} Mb/s`)
-        })
+            launch.on('estimated', (time) => {
+                let hours = Math.floor(time / 3600);
+                let minutes = Math.floor((time - hours * 3600) / 60);
+                let seconds = Math.floor(time - hours * 3600 - minutes * 60);
+                console.log(`${hours}h ${minutes}m ${seconds}s`);
+            })
 
-        launch.on('patch', patch => {
-            console.log(patch);
-            ipcRenderer.send('main-window-progress-load')
-            infoStarting.innerHTML = `Patch en cours...`
-        });
+            launch.on('speed', (speed) => {
+                console.log(`${(speed / 1067008).toFixed(2)} Mb/s`)
+            })
 
-        launch.on('data', (e) => {
-            progressBar.style.display = "none"
-            if (configClient.launcher_config.closeLauncher == 'close-launcher') {
-                ipcRenderer.send("main-window-hide")
-            };
-            new logger('Minecraft', '#36b030');
-            ipcRenderer.send('main-window-progress-load')
-            infoStarting.innerHTML = `Demarrage en cours...`
-            console.log(e);
-        })
+            launch.on('patch', patch => {
+                console.log(patch);
+                ipcRenderer.send('main-window-progress-load')
+                infoStarting.innerHTML = `Patch en cours...`
+            });
 
-        launch.on('close', code => {
-            if (configClient.launcher_config.closeLauncher == 'close-launcher') {
-                ipcRenderer.send("main-window-show")
-            };
-            ipcRenderer.send('main-window-progress-reset')
-            infoStartingBOX.style.display = "none"
-            playInstanceBTN.style.display = "flex"
-            infoStarting.innerHTML = `Vérification`
-            new logger(pkg.name, '#7289da');
-            console.log('Close');
-        });
+            launch.on('data', (e) => {
+                progressBar.style.display = "none"
+                if (configClient.launcher_config.closeLauncher == 'close-launcher') {
+                    ipcRenderer.send("main-window-hide")
+                };
+                new logger('Minecraft', '#36b030');
+                ipcRenderer.send('main-window-progress-load')
+                infoStarting.innerHTML = `Demarrage en cours...`
+                console.log(e);
+            })
 
-        launch.on('error', err => {
-            let popupError = new popup()
+            launch.on('close', code => {
+                if (configClient.launcher_config.closeLauncher == 'close-launcher') {
+                    ipcRenderer.send("main-window-show")
+                };
+                ipcRenderer.send('main-window-progress-reset')
+                infoStartingBOX.style.display = "none"
+                playInstanceBTN.style.display = "flex"
+                infoStarting.innerHTML = `Vérification`
+                new logger(pkg.name, '#7289da');
+                console.log('Close');
+            });
 
+            launch.on('error', err => {
+                let popupError = new popup()
+
+                popupError.openPopup({
+                    title: 'Erreur',
+                    content: err.error,
+                    color: 'red',
+                    options: true
+                })
+
+                if (configClient.launcher_config.closeLauncher == 'close-launcher') {
+                    ipcRenderer.send("main-window-show")
+                };
+                ipcRenderer.send('main-window-progress-reset')
+                infoStartingBOX.style.display = "none"
+                playInstanceBTN.style.display = "flex"
+                infoStarting.innerHTML = `Vérification`
+                new logger(pkg.name, '#7289da');
+                console.log(err);
+            });
+
+            launch.Launch(opt);
+        } catch (err) {
+            let popupError = new popup();
             popupError.openPopup({
                 title: 'Erreur',
-                content: err.error,
+                content: err?.error || err?.message || 'Impossible de charger le profil.',
                 color: 'red',
                 options: true
             })
-
-            if (configClient.launcher_config.closeLauncher == 'close-launcher') {
-                ipcRenderer.send("main-window-show")
-            };
             ipcRenderer.send('main-window-progress-reset')
             infoStartingBOX.style.display = "none"
             playInstanceBTN.style.display = "flex"
             infoStarting.innerHTML = `Vérification`
-            new logger(pkg.name, '#7289da');
-            console.log(err);
-        });
+            console.error(err);
+        }
     }
 
     getdate(e) {

@@ -24,17 +24,36 @@ class Config {
     }
 
     async getInstanceList() {
-        let urlInstance = `${url}/files`
-        let instances = await nodeFetch(urlInstance).then(res => res.json()).catch(err => err)
-        let instancesList = []
-        instances = Object.entries(instances)
-
-        for (let [name, data] of instances) {
-            let instance = data
-            instance.name = name
-            instancesList.push(instance)
+        const urlInstance = `${url}/files`;
+        let response;
+        try {
+            response = await nodeFetch(urlInstance);
+        } catch (error) {
+            throw { error: { code: 'NETWORK_ERROR', message: 'Impossible de contacter le serveur d’instances.', details: error } };
         }
-        return instancesList
+
+        if (!response.ok) {
+            throw { error: { code: response.status, message: `Serveur d’instances indisponible (${response.statusText})` } };
+        }
+
+        let instancesJSON;
+        try {
+            instancesJSON = await response.json();
+        } catch (error) {
+            throw { error: { code: 'INVALID_JSON', message: 'Réponse invalide du serveur d’instances.', details: error } };
+        }
+
+        if (!instancesJSON || typeof instancesJSON !== 'object') {
+            throw { error: { code: 'INVALID_DATA', message: 'Liste des instances introuvable ou vide.' } };
+        }
+
+        const instancesList = [];
+        for (let [name, data] of Object.entries(instancesJSON)) {
+            let instance = data;
+            instance.name = name;
+            instancesList.push(instance);
+        }
+        return instancesList;
     }
 
     async getNews() {
