@@ -207,7 +207,6 @@ class Home {
 
     async startGame() {
         let playInstanceBTN = document.querySelector('.play-instance');
-        let profileSwitchBTN = document.querySelector('.profile-switch');
         let infoStartingBOX = document.querySelector('.info-starting-game');
         let infoStarting = document.querySelector(".info-starting-game-text");
         let progressBar = document.querySelector('.progress-bar');
@@ -269,8 +268,6 @@ class Home {
             playInstanceBTN.style.display = "none"
             infoStartingBOX.style.display = "block"
             progressBar.style.display = "";
-            profileSwitchBTN?.style.setProperty('visibility', 'hidden');
-            profileSwitchBTN?.style.setProperty('pointer-events', 'none');
             ipcRenderer.send('main-window-progress-load')
 
             launch.on('extract', extract => {
@@ -327,8 +324,6 @@ class Home {
                 ipcRenderer.send('main-window-progress-reset')
                 infoStartingBOX.style.display = "none"
                 playInstanceBTN.style.display = "flex"
-                profileSwitchBTN?.style.removeProperty('visibility');
-                profileSwitchBTN?.style.removeProperty('pointer-events');
                 infoStarting.innerHTML = `Vérification`
                 new logger(pkg.name, '#7289da');
                 console.log('Close');
@@ -350,8 +345,6 @@ class Home {
                 ipcRenderer.send('main-window-progress-reset')
                 infoStartingBOX.style.display = "none"
                 playInstanceBTN.style.display = "flex"
-                profileSwitchBTN?.style.removeProperty('visibility');
-                profileSwitchBTN?.style.removeProperty('pointer-events');
                 infoStarting.innerHTML = `Vérification`
                 new logger(pkg.name, '#7289da');
                 console.log(err);
