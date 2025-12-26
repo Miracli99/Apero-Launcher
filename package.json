@@ -1,7 +1,7 @@
 {
     "name": "BelleBitt-Launcher",
     "productName": "BelleBit Launcher",
-    "version": "2.0.14",
+    "version": "2.0.15",
     "description": "Launcher Minecraft pour le serveur BelleBitt",
     "main": "src/app.js",
     "author": {
