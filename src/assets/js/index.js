@@ -110,11 +110,26 @@ class Splash {
             return this.shutdown("Impossible de récupérer le fichier de mise à jour pour votre plateforme.<br>Veuillez réessayer plus tard.");
         }
 
-        this.setStatus(`Mise à jour disponible !<br><div class="download-update">Télécharger</div>`);
-        document.querySelector(".download-update").addEventListener("click", () => {
-            shell.openExternal(latest.browser_download_url);
+        this.setStatus('Mise à jour disponible !');
+        const downloadButton = document.createElement('div');
+        downloadButton.className = 'download-update';
+        downloadButton.textContent = 'Télécharger';
+        this.message.appendChild(document.createElement('br'));
+        this.message.appendChild(downloadButton);
+        downloadButton.addEventListener("click", () => {
+            this.openSafeExternalUrl(latest.browser_download_url);
             return this.shutdown("Téléchargement en cours...");
         });
+    }
+
+    openSafeExternalUrl(url) {
+        try {
+            const parsedUrl = new URL(url);
+            if (!['http:', 'https:'].includes(parsedUrl.protocol)) return;
+            shell.openExternal(parsedUrl.href);
+        } catch (err) {
+            console.error(`Invalid external URL: ${url}`);
+        }
     }
 
 
@@ -144,7 +159,11 @@ class Splash {
     }
 
     setStatus(text) {
-        this.message.innerHTML = text;
+        this.message.textContent = '';
+        String(text || '').split(/<br\s*\/?>|\r?\n/i).forEach((line, index) => {
+            if (index) this.message.appendChild(document.createElement('br'));
+            this.message.appendChild(document.createTextNode(line));
+        });
     }
 
     toggleProgress() {

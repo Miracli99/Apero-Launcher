@@ -17,12 +17,16 @@ function getWindow() {
 
 function destroyWindow() {
     if (!mainWindow) return;
-    app.quit();
+    mainWindow.close();
     mainWindow = undefined;
 }
 
 function createWindow() {
-    destroyWindow();
+    if (mainWindow) {
+        mainWindow.focus();
+        return;
+    }
+
     mainWindow = new BrowserWindow({
         title: windowTitle,
         width: 1280,

@@ -56,15 +56,17 @@ ipcMain.handle('path-user-data', () => app.getPath('userData'))
 ipcMain.handle('appData', e => app.getPath('appData'))
 
 ipcMain.on('main-window-maximize', () => {
-    if (MainWindow.getWindow().isMaximized()) {
-        MainWindow.getWindow().unmaximize();
-    } else {
-        MainWindow.getWindow().maximize();
-    }
+    withWindow(() => MainWindow.getWindow(), (win) => {
+        if (win.isMaximized()) {
+            win.unmaximize();
+        } else {
+            win.maximize();
+        }
+    })
 })
 
-ipcMain.on('main-window-hide', () => MainWindow.getWindow().hide())
-ipcMain.on('main-window-show', () => MainWindow.getWindow().show())
+ipcMain.on('main-window-hide', () => withWindow(() => MainWindow.getWindow(), (win) => win.hide()))
+ipcMain.on('main-window-show', () => withWindow(() => MainWindow.getWindow(), (win) => win.show()))
 
 ipcMain.handle('Microsoft-window', async (_, client_id) => {
     return await new Microsoft(client_id).getAuth();

@@ -55,16 +55,35 @@ async function addAccount(data) {
     let div = document.createElement("div");
     div.classList.add("account");
     div.id = data.ID;
-    div.innerHTML = `
-        <div class="profile-image" ${skin ? 'style="background-image: url(' + skin + ');"' : ''}></div>
-        <div class="profile-infos">
-            <div class="profile-pseudo">${data.name}</div>
-            <div class="profile-uuid">${data.uuid}</div>
-        </div>
-        <div class="delete-profile" id="${data.ID}">
-            <div class="icon-account-delete delete-profile-icon"></div>
-        </div>
-    `
+
+    let profileImage = document.createElement("div");
+    profileImage.classList.add("profile-image");
+    if (skin) profileImage.style.backgroundImage = `url(${skin})`;
+
+    let profileInfos = document.createElement("div");
+    profileInfos.classList.add("profile-infos");
+
+    let profilePseudo = document.createElement("div");
+    profilePseudo.classList.add("profile-pseudo");
+    profilePseudo.textContent = data.name || '';
+
+    let profileUuid = document.createElement("div");
+    profileUuid.classList.add("profile-uuid");
+    profileUuid.textContent = data.uuid || '';
+
+    let deleteProfile = document.createElement("div");
+    deleteProfile.classList.add("delete-profile");
+    deleteProfile.id = data.ID;
+
+    let deleteProfileIcon = document.createElement("div");
+    deleteProfileIcon.classList.add("icon-account-delete", "delete-profile-icon");
+
+    profileInfos.appendChild(profilePseudo);
+    profileInfos.appendChild(profileUuid);
+    deleteProfile.appendChild(deleteProfileIcon);
+    div.appendChild(profileImage);
+    div.appendChild(profileInfos);
+    div.appendChild(deleteProfile);
     return document.querySelector('.accounts-list').appendChild(div);
 }
 
@@ -73,6 +92,7 @@ async function accountSelect(data) {
     let activeAccount = document.querySelector('.account-select')
 
     if (activeAccount) activeAccount.classList.toggle('account-select');
+    if (!account) return;
     account.classList.add('account-select');
     if (data?.profile?.skins[0]?.base64) headplayer(data.profile.skins[0].base64);
 }
@@ -89,27 +109,27 @@ async function setStatus(opt) {
 
     if (!opt) {
         statusServerElement.classList.add('red')
-        statusServerElement.innerHTML = `Ferme - 0 ms`
+        statusServerElement.textContent = `Ferme - 0 ms`
         document.querySelector('.status-player-count').classList.add('red')
-        playersOnline.innerHTML = '0'
+        playersOnline.textContent = '0'
         return
     }
 
     let { ip, port, nameServer } = opt
-    nameServerElement.innerHTML = nameServer
+    nameServerElement.textContent = nameServer || 'Minecraft'
     let status = new Status(ip, port);
     let statusServer = await status.getStatus().then(res => res).catch(err => err);
 
     if (!statusServer.error) {
         statusServerElement.classList.remove('red')
         document.querySelector('.status-player-count').classList.remove('red')
-        statusServerElement.innerHTML = `En ligne - ${statusServer.ms} ms`
-        playersOnline.innerHTML = statusServer.playersConnect
+        statusServerElement.textContent = `En ligne - ${statusServer.ms} ms`
+        playersOnline.textContent = statusServer.playersConnect
     } else {
         statusServerElement.classList.add('red')
-        statusServerElement.innerHTML = `Ferme - 0 ms`
+        statusServerElement.textContent = `Ferme - 0 ms`
         document.querySelector('.status-player-count').classList.add('red')
-        playersOnline.innerHTML = '0'
+        playersOnline.textContent = '0'
     }
 }
 

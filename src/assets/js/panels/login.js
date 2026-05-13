@@ -9,6 +9,16 @@ import { popup, database, changePanel, accountSelect, addAccount, config, setSta
 
 const MICROSOFT_FALLBACK_CLIENT_ID = '00000000402b5328';
 
+function getErrorMessage(err) {
+    if (err == null) return 'Erreur inconnue';
+    if (typeof err === 'string') return err;
+    if (err instanceof Error) return err.message;
+    if (err.message) return getErrorMessage(err.message);
+    if (err.errorMessage) return getErrorMessage(err.errorMessage);
+    if (err.error) return getErrorMessage(err.error);
+    return 'Erreur inconnue';
+}
+
 class Login {
     static id = "login";
     async init(config) {
@@ -56,7 +66,7 @@ class Login {
             }).catch(err => {
                 popupLogin.openPopup({
                     title: 'Erreur',
-                    content: err,
+                    content: getErrorMessage(err),
                     options: true
                 });
             });
@@ -101,8 +111,16 @@ class Login {
                 });
                 return;
             }
-            await this.saveData(MojangConnect)
-            popupLogin.closePopup();
+            try {
+                await this.saveData(MojangConnect)
+                popupLogin.closePopup();
+            } catch (err) {
+                popupLogin.openPopup({
+                    title: 'Erreur',
+                    content: getErrorMessage(err),
+                    options: true
+                });
+            }
         });
     }
 
@@ -184,12 +202,28 @@ class Login {
                         return;
                     }
 
-                    await this.saveData(AZauthConnect)
-                    PopupLogin.closePopup();
+                    try {
+                        await this.saveData(AZauthConnect)
+                        PopupLogin.closePopup();
+                    } catch (err) {
+                        PopupLogin.openPopup({
+                            title: 'Erreur',
+                            content: getErrorMessage(err),
+                            options: true
+                        });
+                    }
                 });
             } else if (!AZauthConnect.A2F) {
-                await this.saveData(AZauthConnect)
-                PopupLogin.closePopup();
+                try {
+                    await this.saveData(AZauthConnect)
+                    PopupLogin.closePopup();
+                } catch (err) {
+                    PopupLogin.openPopup({
+                        title: 'Erreur',
+                        content: getErrorMessage(err),
+                        options: true
+                    });
+                }
             }
         });
     }
@@ -207,10 +241,15 @@ class Login {
 
         for (let instance of instancesList) {
             if (instance.whitelistActive) {
-                let whitelist = instance.whitelist.find(whitelist => whitelist == account.name)
+                let whitelist = Array.isArray(instance.whitelist) ? instance.whitelist.find(whitelist => whitelist == account.name) : undefined
                 if (whitelist !== account.name) {
                     if (instance.name == instanceSelect) {
                         let newInstanceSelect = instancesList.find(i => i.whitelistActive == false)
+                        if (!newInstanceSelect) {
+                            configClient.instance_selct = null
+                            await setStatus(null)
+                            continue;
+                        }
                         configClient.instance_selct = newInstanceSelect.name
                         await setStatus(newInstanceSelect.status)
                     }

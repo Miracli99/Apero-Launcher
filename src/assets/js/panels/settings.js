@@ -89,8 +89,8 @@ class Settings {
                         let allAccounts = await this.db.readAllData('accounts');
                         configClient.account_selected = allAccounts[0].ID
                         accountSelect(allAccounts[0]);
-                        let newInstanceSelect = await this.setInstance(allAccounts[0]);
-                        configClient.instance_selct = newInstanceSelect.instance_selct
+                        configClient = await this.setInstance(allAccounts[0]);
+                        configClient.account_selected = allAccounts[0].ID
                         return await this.db.updateData('configClient', configClient);
                     }
                 }
@@ -109,10 +109,15 @@ class Settings {
 
         for (let instance of instancesList) {
             if (instance.whitelistActive) {
-                let whitelist = instance.whitelist.find(whitelist => whitelist == auth.name)
-                if (whitelist !== auth.name) {
+                let whitelist = Array.isArray(instance.whitelist) ? instance.whitelist.find(whitelist => whitelist == auth?.name) : undefined
+                if (whitelist !== auth?.name) {
                     if (instance.name == instanceSelect) {
                         let newInstanceSelect = instancesList.find(i => i.whitelistActive == false)
+                        if (!newInstanceSelect) {
+                            configClient.instance_selct = null
+                            await setStatus(null)
+                            continue;
+                        }
                         configClient.instance_selct = newInstanceSelect.name
                         await setStatus(newInstanceSelect.status)
                     }

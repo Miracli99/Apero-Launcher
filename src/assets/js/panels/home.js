@@ -8,6 +8,31 @@ const { Launch } = require('minecraft-java-core')
 const { shell, ipcRenderer } = require('electron')
 const path = require('path')
 
+function appendTextWithBreaks(element, value) {
+    const lines = String(value || '').split(/\r?\n/);
+    lines.forEach((line, index) => {
+        if (index) element.appendChild(document.createElement('br'));
+        element.appendChild(document.createTextNode(line));
+    });
+}
+
+function createElement(className, text) {
+    const element = document.createElement('div');
+    if (className) element.className = className;
+    if (typeof text !== 'undefined') element.textContent = text;
+    return element;
+}
+
+function openSafeExternalUrl(url) {
+    try {
+        const parsedUrl = new URL(url);
+        if (!['http:', 'https:'].includes(parsedUrl.protocol)) return;
+        shell.openExternal(parsedUrl.href);
+    } catch (err) {
+        console.error(`Invalid external URL: ${url}`);
+    }
+}
+
 class Home {
     static id = "home";
     async init(config) {
@@ -24,71 +49,71 @@ class Home {
         let news = await config.getNews().then(res => res).catch(err => false);
         if (news) {
             if (!news.length) {
-                let blockNews = document.createElement('div');
-                blockNews.classList.add('news-block');
-                blockNews.innerHTML = `
-                    <div class="news-header">
-                        <img class="server-status-icon" src="assets/images/icon.png">
-                        <div class="header-text">
-                            <div class="title">Aucun news n'ai actuellement disponible.</div>
-                        </div>
-                        <div class="date">
-                            <div class="day">1</div>
-                            <div class="month">Janvier</div>
-                        </div>
-                    </div>
-                    <div class="news-content">
-                        <div class="bbWrapper">
-                            <p>Vous pourrez suivre ici toutes les news relative au serveur.</p>
-                        </div>
-                    </div>`
-                newsElement.appendChild(blockNews);
+                newsElement.appendChild(this.createNewsBlock({
+                    title: "Aucun news n'ai actuellement disponible.",
+                    content: 'Vous pourrez suivre ici toutes les news relative au serveur.',
+                    day: 1,
+                    month: 'Janvier'
+                }));
             } else {
                 for (let News of news) {
                     let date = this.getdate(News.publish_date)
-                    let blockNews = document.createElement('div');
-                    blockNews.classList.add('news-block');
-                    blockNews.innerHTML = `
-                        <div class="news-header">
-                            <img class="server-status-icon" src="assets/images/icon.png">
-                            <div class="header-text">
-                                <div class="title">${News.title}</div>
-                            </div>
-                            <div class="date">
-                                <div class="day">${date.day}</div>
-                                <div class="month">${date.month}</div>
-                            </div>
-                        </div>
-                        <div class="news-content">
-                            <div class="bbWrapper">
-                                <p>${News.content.replace(/\n/g, '</br>')}</p>
-                                <p class="news-author">Auteur - <span>${News.author}</span></p>
-                            </div>
-                        </div>`
-                    newsElement.appendChild(blockNews);
+                    newsElement.appendChild(this.createNewsBlock({
+                        title: News.title,
+                        content: News.content,
+                        author: News.author,
+                        day: date.day,
+                        month: date.month
+                    }));
                 }
             }
         } else {
-            let blockNews = document.createElement('div');
-            blockNews.classList.add('news-block');
-            blockNews.innerHTML = `
-                <div class="news-header">
-                        <img class="server-status-icon" src="assets/images/icon.png">
-                        <div class="header-text">
-                            <div class="title">Error.</div>
-                        </div>
-                        <div class="date">
-                            <div class="day">1</div>
-                            <div class="month">Janvier</div>
-                        </div>
-                    </div>
-                    <div class="news-content">
-                        <div class="bbWrapper">
-                            <p>Impossible de contacter le serveur des news.</br>Merci de vérifier votre configuration.</p>
-                        </div>
-                    </div>`
-            newsElement.appendChild(blockNews);
+            newsElement.appendChild(this.createNewsBlock({
+                title: 'Error.',
+                content: 'Impossible de contacter le serveur des news.\nMerci de vérifier votre configuration.',
+                day: 1,
+                month: 'Janvier'
+            }));
         }
+    }
+
+    createNewsBlock({ title, content, author, day, month }) {
+        let blockNews = createElement('news-block');
+        let newsHeader = createElement('news-header');
+        let icon = document.createElement('img');
+        icon.className = 'server-status-icon';
+        icon.src = 'assets/images/icon.png';
+
+        let headerText = createElement('header-text');
+        headerText.appendChild(createElement('title', title));
+
+        let date = createElement('date');
+        date.appendChild(createElement('day', day));
+        date.appendChild(createElement('month', month));
+
+        let newsContent = createElement('news-content');
+        let wrapper = createElement('bbWrapper');
+        let paragraph = document.createElement('p');
+        appendTextWithBreaks(paragraph, content);
+        wrapper.appendChild(paragraph);
+
+        if (author) {
+            let authorParagraph = document.createElement('p');
+            authorParagraph.className = 'news-author';
+            authorParagraph.appendChild(document.createTextNode('Auteur - '));
+            let authorSpan = document.createElement('span');
+            authorSpan.textContent = author;
+            authorParagraph.appendChild(authorSpan);
+            wrapper.appendChild(authorParagraph);
+        }
+
+        newsHeader.appendChild(icon);
+        newsHeader.appendChild(headerText);
+        newsHeader.appendChild(date);
+        newsContent.appendChild(wrapper);
+        blockNews.appendChild(newsHeader);
+        blockNews.appendChild(newsContent);
+        return blockNews;
     }
 
     socialLick() {
@@ -96,7 +121,7 @@ class Home {
 
         socials.forEach(social => {
             social.addEventListener('click', e => {
-                shell.openExternal(e.target.dataset.url)
+                openSafeExternalUrl(e.currentTarget.dataset.url || e.target.dataset.url)
             })
         });
     }
@@ -104,7 +129,10 @@ class Home {
     async instancesSelect() {
         let configClient = await this.db.readData('configClient')
         let auth = await this.db.readData('accounts', configClient.account_selected)
-        let instancesList = await config.getInstanceList()
+        let instancesList = await config.getInstanceList().catch(err => {
+            console.error(err);
+            return [];
+        })
         let instanceSelect = instancesList.find(i => i.name == configClient?.instance_selct) ? configClient?.instance_selct : null
 
         let playBTN = document.querySelector('.play-btn')
@@ -121,6 +149,14 @@ class Home {
 
         if (!instanceSelect) {
             let newInstanceSelect = instancesList.find(i => i.whitelistActive == false)
+            if (!newInstanceSelect) {
+                if (selectedProfileName) selectedProfileName.textContent = auth?.name || 'Aucun'
+                if (selectedInstanceName) selectedInstanceName.textContent = 'Aucune'
+                playBTN?.setAttribute('disabled', 'true')
+                playBTN?.classList.add('disabled')
+                await setStatus(null)
+                return
+            }
             let configClient = await this.db.readData('configClient')
             configClient.instance_selct = newInstanceSelect.name
             instanceSelect = newInstanceSelect.name
@@ -129,13 +165,26 @@ class Home {
 
         if (selectedProfileName) selectedProfileName.textContent = auth?.name || 'Aucun'
         if (selectedInstanceName) selectedInstanceName.textContent = instanceSelect || 'Aucune'
+        playBTN?.removeAttribute('disabled')
+        playBTN?.classList.remove('disabled')
 
         for (let instance of instancesList) {
             if (instance.whitelistActive) {
-                let whitelist = instance.whitelist.find(whitelist => whitelist == auth?.name)
+                let whitelist = Array.isArray(instance.whitelist) ? instance.whitelist.find(whitelist => whitelist == auth?.name) : undefined
                 if (whitelist !== auth?.name) {
                     if (instance.name == instanceSelect) {
                         let newInstanceSelect = instancesList.find(i => i.whitelistActive == false)
+                        if (!newInstanceSelect) {
+                            let configClient = await this.db.readData('configClient')
+                            configClient.instance_selct = null
+                            instanceSelect = null
+                            if (selectedInstanceName) selectedInstanceName.textContent = 'Aucune'
+                            playBTN?.setAttribute('disabled', 'true')
+                            playBTN?.classList.add('disabled')
+                            await setStatus(null)
+                            await this.db.updateData('configClient', configClient)
+                            continue;
+                        }
                         let configClient = await this.db.readData('configClient')
                         configClient.instance_selct = newInstanceSelect.name
                         instanceSelect = newInstanceSelect.name
@@ -165,7 +214,7 @@ class Home {
                 instancePopup.style.display = 'none'
                 let instance = await config.getInstanceList()
                 let options = instance.find(i => i.name == configClient.instance_selct)
-                await setStatus(options.status)
+                await setStatus(options?.status)
             }
         })
 
@@ -174,24 +223,17 @@ class Home {
             let instanceSelect = configClient.instance_selct
             let auth = await this.db.readData('accounts', configClient.account_selected)
 
-            instancesListPopup.innerHTML = ''
+            instancesListPopup.textContent = ''
             for (let instance of instancesList) {
                 if (instance.whitelistActive) {
-                    instance.whitelist.map(whitelist => {
+                    const whitelistEntries = Array.isArray(instance.whitelist) ? instance.whitelist : [];
+                    whitelistEntries.map(whitelist => {
                         if (whitelist == auth?.name) {
-                            if (instance.name == instanceSelect) {
-                                instancesListPopup.innerHTML += `<div id="${instance.name}" class="instance-elements active-instance">${instance.name}</div>`
-                            } else {
-                                instancesListPopup.innerHTML += `<div id="${instance.name}" class="instance-elements">${instance.name}</div>`
-                            }
+                            instancesListPopup.appendChild(this.createInstanceElement(instance, instanceSelect));
                         }
                     })
                 } else {
-                    if (instance.name == instanceSelect) {
-                        instancesListPopup.innerHTML += `<div id="${instance.name}" class="instance-elements active-instance">${instance.name}</div>`
-                    } else {
-                        instancesListPopup.innerHTML += `<div id="${instance.name}" class="instance-elements">${instance.name}</div>`
-                    }
+                    instancesListPopup.appendChild(this.createInstanceElement(instance, instanceSelect));
                 }
             }
 
@@ -202,11 +244,19 @@ class Home {
             await this.startGame()
         })
 
-        instanceCloseBTN.addEventListener('click', () => instancePopup.style.display = 'none')
+        instanceCloseBTN?.addEventListener('click', () => instancePopup.style.display = 'none')
+    }
+
+    createInstanceElement(instance, instanceSelect) {
+        let element = createElement('instance-elements', instance.name);
+        element.id = instance.name;
+        if (instance.name == instanceSelect) element.classList.add('active-instance');
+        return element;
     }
 
     async startGame() {
         let playInstanceBTN = document.querySelector('.play-instance');
+        let profileSwitchBTN = document.querySelector('.profile-switch');
         let infoStartingBOX = document.querySelector('.info-starting-game');
         let infoStarting = document.querySelector(".info-starting-game-text");
         let progressBar = document.querySelector('.progress-bar');
@@ -217,9 +267,14 @@ class Home {
             let instance = await config.getInstanceList();
             let authenticator = await this.db.readData('accounts', configClient.account_selected);
             let options = instance.find(i => i.name == configClient.instance_selct);
+            let loaderConfig = options?.loadder || options?.loader;
 
             if (!options) {
                 throw { error: `Instance "${configClient.instance_selct}" introuvable.` };
+            }
+
+            if (!loaderConfig) {
+                throw { error: `Configuration du loader introuvable pour l'instance "${options.name}".` };
             }
 
             const appDataPath = await appdata();
@@ -232,20 +287,20 @@ class Home {
                 timeout: 30000,
                 path: instancePath,
                 instance: options.name,
-                version: options.loadder.minecraft_version,
+                version: loaderConfig.minecraft_version,
                 detached: configClient.launcher_config.closeLauncher == "close-all" ? false : true,
                 downloadFileMultiple: configClient.launcher_config.download_multi,
                 intelEnabledMac: configClient.launcher_config.intelEnabledMac,
 
                 loader: {
-                    type: options.loadder.loadder_type,
-                    build: options.loadder.loadder_version,
-                    enable: options.loadder.loadder_type == 'none' ? false : true
+                    type: loaderConfig.loadder_type,
+                    build: loaderConfig.loadder_version,
+                    enable: loaderConfig.loadder_type == 'none' ? false : true
                 },
 
                 verify: options.verify,
 
-                ignored: [...options.ignored],
+                ignored: [...(options.ignored || [])],
 
                 java: {
                     path: configClient.java_config.java_path,
@@ -268,6 +323,8 @@ class Home {
             playInstanceBTN.style.display = "none"
             infoStartingBOX.style.display = "block"
             progressBar.style.display = "";
+            profileSwitchBTN?.style.setProperty('visibility', 'hidden');
+            profileSwitchBTN?.style.setProperty('pointer-events', 'none');
             ipcRenderer.send('main-window-progress-load')
 
             launch.on('extract', extract => {
@@ -276,14 +333,14 @@ class Home {
             });
 
             launch.on('progress', (progress, size) => {
-                infoStarting.innerHTML = `Téléchargement ${((progress / size) * 100).toFixed(0)}%`
+                infoStarting.textContent = `Téléchargement ${((progress / size) * 100).toFixed(0)}%`
                 ipcRenderer.send('main-window-progress', { progress, size })
                 progressBar.value = progress;
                 progressBar.max = size;
             });
 
             launch.on('check', (progress, size) => {
-                infoStarting.innerHTML = `Vérification ${((progress / size) * 100).toFixed(0)}%`
+                infoStarting.textContent = `Vérification ${((progress / size) * 100).toFixed(0)}%`
                 ipcRenderer.send('main-window-progress', { progress, size })
                 progressBar.value = progress;
                 progressBar.max = size;
@@ -303,7 +360,7 @@ class Home {
             launch.on('patch', patch => {
                 console.log(patch);
                 ipcRenderer.send('main-window-progress-load')
-                infoStarting.innerHTML = `Patch en cours...`
+                infoStarting.textContent = `Patch en cours...`
             });
 
             launch.on('data', (e) => {
@@ -313,7 +370,7 @@ class Home {
                 };
                 new logger('Minecraft', '#36b030');
                 ipcRenderer.send('main-window-progress-load')
-                infoStarting.innerHTML = `Demarrage en cours...`
+                infoStarting.textContent = `Demarrage en cours...`
                 console.log(e);
             })
 
@@ -324,7 +381,9 @@ class Home {
                 ipcRenderer.send('main-window-progress-reset')
                 infoStartingBOX.style.display = "none"
                 playInstanceBTN.style.display = "flex"
-                infoStarting.innerHTML = `Vérification`
+                profileSwitchBTN?.style.removeProperty('visibility');
+                profileSwitchBTN?.style.removeProperty('pointer-events');
+                infoStarting.textContent = `Vérification`
                 new logger(pkg.name, '#7289da');
                 console.log('Close');
             });
@@ -345,7 +404,9 @@ class Home {
                 ipcRenderer.send('main-window-progress-reset')
                 infoStartingBOX.style.display = "none"
                 playInstanceBTN.style.display = "flex"
-                infoStarting.innerHTML = `Vérification`
+                profileSwitchBTN?.style.removeProperty('visibility');
+                profileSwitchBTN?.style.removeProperty('pointer-events');
+                infoStarting.textContent = `Vérification`
                 new logger(pkg.name, '#7289da');
                 console.log(err);
             });
@@ -364,7 +425,7 @@ class Home {
             playInstanceBTN.style.display = "flex"
             profileSwitchBTN?.style.removeProperty('visibility');
             profileSwitchBTN?.style.removeProperty('pointer-events');
-            infoStarting.innerHTML = `Vérification`
+            infoStarting.textContent = `Vérification`
             console.error(err);
         }
     }

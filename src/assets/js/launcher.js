@@ -18,6 +18,10 @@ const os = require('os');
 
 const MICROSOFT_FALLBACK_CLIENT_ID = '00000000402b5328';
 
+function getAccountErrorMessage(error) {
+    return error?.errorMessage || error?.message || error?.error || 'Erreur inconnue';
+}
+
 class Launcher {
     async init() {
         this.initLog();
@@ -139,8 +143,12 @@ class Launcher {
         if (accounts?.length) {
             for (let account of accounts) {
                 let account_ID = account.ID
-                if (account.error) {
+                if (account.error || !account.meta?.type) {
                     await this.db.deleteData('accounts', account_ID)
+                    if (account_ID == account_selected) {
+                        configClient.account_selected = null
+                        await this.db.updateData('configClient', configClient)
+                    }
                     continue
                 }
                 if (account.meta.type === 'Xbox') {
@@ -161,7 +169,7 @@ class Launcher {
                             configClient.account_selected = null
                             await this.db.updateData('configClient', configClient)
                         }
-                        console.error(`[Account] ${account.name}: ${refresh_accounts.errorMessage}`);
+                        console.error(`[Account] ${account.name}: ${getAccountErrorMessage(refresh_accounts)}`);
                         continue;
                     }
 
@@ -181,17 +189,17 @@ class Launcher {
                     let refresh_accounts = await new AZauth(this.config.online).verify(account);
 
                     if (refresh_accounts.error) {
-                        this.db.deleteData('accounts', account_ID)
+                        await this.db.deleteData('accounts', account_ID)
                         if (account_ID == account_selected) {
                             configClient.account_selected = null
-                            this.db.updateData('configClient', configClient)
+                            await this.db.updateData('configClient', configClient)
                         }
-                        console.error(`[Account] ${account.name}: ${refresh_accounts.message}`);
+                        console.error(`[Account] ${account.name}: ${getAccountErrorMessage(refresh_accounts)}`);
                         continue;
                     }
 
                     refresh_accounts.ID = account_ID
-                    this.db.updateData('accounts', refresh_accounts, account_ID)
+                    await this.db.updateData('accounts', refresh_accounts, account_ID)
                     await addAccount(refresh_accounts)
                     if (account_ID == account_selected) accountSelect(refresh_accounts)
                 } else if (account.meta.type == 'Mojang') {
@@ -207,7 +215,7 @@ class Launcher {
 
                         refresh_accounts.ID = account_ID
                         await addAccount(refresh_accounts)
-                        this.db.updateData('accounts', refresh_accounts, account_ID)
+                        await this.db.updateData('accounts', refresh_accounts, account_ID)
                         if (account_ID == account_selected) accountSelect(refresh_accounts)
                         continue;
                     }
@@ -215,25 +223,25 @@ class Launcher {
                     let refresh_accounts = await Mojang.refresh(account);
 
                     if (refresh_accounts.error) {
-                        this.db.deleteData('accounts', account_ID)
+                        await this.db.deleteData('accounts', account_ID)
                         if (account_ID == account_selected) {
                             configClient.account_selected = null
-                            this.db.updateData('configClient', configClient)
+                            await this.db.updateData('configClient', configClient)
                         }
-                        console.error(`[Account] ${account.name}: ${refresh_accounts.errorMessage}`);
+                        console.error(`[Account] ${account.name}: ${getAccountErrorMessage(refresh_accounts)}`);
                         continue;
                     }
 
                     refresh_accounts.ID = account_ID
-                    this.db.updateData('accounts', refresh_accounts, account_ID)
+                    await this.db.updateData('accounts', refresh_accounts, account_ID)
                     await addAccount(refresh_accounts)
                     if (account_ID == account_selected) accountSelect(refresh_accounts)
                 } else {
                     console.error(`[Account] ${account.name}: Account Type Not Found`);
-                    this.db.deleteData('accounts', account_ID)
+                    await this.db.deleteData('accounts', account_ID)
                     if (account_ID == account_selected) {
                         configClient.account_selected = null
-                        this.db.updateData('configClient', configClient)
+                        await this.db.updateData('configClient', configClient)
                     }
                 }
             }
@@ -241,6 +249,13 @@ class Launcher {
             accounts = await this.db.readAllData('accounts')
             configClient = await this.db.readData('configClient')
             account_selected = configClient ? configClient.account_selected : null
+
+            if (!accounts.length) {
+                configClient.account_selected = null
+                await this.db.updateData('configClient', configClient);
+                popupRefresh.closePopup()
+                return changePanel("login");
+            }
 
             if (!account_selected) {
                 let uuid = accounts[0].ID
@@ -250,13 +265,6 @@ class Launcher {
                     const selectedAccount = accounts.find(account => account.ID === uuid)
                     if (selectedAccount) accountSelect(selectedAccount)
                 }
-            }
-
-            if (!accounts.length) {
-                configClient.account_selected = null
-                await this.db.updateData('configClient', configClient);
-                popupRefresh.closePopup()
-                return changePanel("login");
             }
 
             popupRefresh.closePopup()
