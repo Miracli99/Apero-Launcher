@@ -15,33 +15,95 @@ import popup from './utils/popup.js';
 import { skin2D } from './utils/skin.js';
 import slider from './utils/slider.js';
 
-async function setBackground(theme) {
-    if (typeof theme == 'undefined') {
-        let databaseLauncher = new database();
-        let configClient = await databaseLauncher.readData('configClient');
-        theme = configClient?.launcher_config?.theme || "auto"
-        theme = await ipcRenderer.invoke('is-dark-theme', theme).then(res => res)
+const visualThemes = {
+    beer: {
+        badge: 'Cuvée du jour',
+        title: 'BelleBit Taproom',
+        tagline: 'Recettes houblonnées, profils brassés maison et serveurs toujours en pression.',
+        slogan: 'Ajuste ta cuvée de paramètres avant de trinquer.',
+        note: 'Astuce : garde au frais tes réglages avant de partir miner.'
+    },
+    neon: {
+        badge: 'Signal connecté',
+        title: 'BelleBit Neon Grid',
+        tagline: 'Traverse le réseau, choisis ton monde et branche-toi sur l’aventure.',
+        slogan: 'Calibre ton signal avant d’entrer dans la grille.',
+        note: 'Astuce : une configuration stable garde le portail synchronisé.'
+    },
+    coffee: {
+        badge: 'Pause du jour',
+        title: 'BelleBit Coffee House',
+        tagline: 'Un launcher chaleureux, des mondes corsés et une aventure fraîchement préparée.',
+        slogan: 'Prépare tes réglages comme ton café préféré.',
+        note: 'Astuce : enregistre ta recette avant de repartir explorer.'
+    },
+    forest: {
+        badge: 'Sentier ouvert',
+        title: 'BelleBit Wildwood',
+        tagline: 'Entre mousse, lucioles et vieux portails, ton prochain monde t’attend.',
+        slogan: 'Accorde ton équipement avant de suivre les lucioles.',
+        note: 'Astuce : vérifie ton sac avant de quitter le campement.'
     }
+};
+
+function applyVisualTheme(theme = 'beer') {
+    const selectedTheme = visualThemes[theme] ? theme : 'beer';
+    const copy = visualThemes[selectedTheme];
+    const currentTheme = document.body.dataset.visualTheme;
+
+    const updateTheme = () => {
+        document.body.dataset.visualTheme = selectedTheme;
+
+        const content = {
+            '.home .badge': copy.badge,
+            '.home .taproom-title': copy.title,
+            '.home .tagline': copy.tagline,
+            '.settings .beer-slogan': copy.slogan,
+            '.settings .beer-footer-note': copy.note
+        };
+
+        for (const [selector, text] of Object.entries(content)) {
+            const element = document.querySelector(selector);
+            if (element) element.textContent = text;
+        }
+
+        document.querySelectorAll('.visual-theme-card').forEach(card => {
+            const isSelected = card.dataset.theme === selectedTheme;
+            card.classList.toggle('active-visual-theme', isSelected);
+            card.setAttribute('aria-pressed', String(isSelected));
+        });
+    };
+
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (currentTheme && currentTheme !== selectedTheme && document.startViewTransition && !reduceMotion) {
+        return document.startViewTransition(updateTheme);
+    }
+
+    updateTheme();
+}
+
+async function setBackground() {
     let background
     let body = document.body;
-    body.className = theme ? 'dark global' : 'light global';
+    body.className = 'dark global';
     if (fs.existsSync(`${__dirname}/assets/images/background/easterEgg`) && Math.random() < 0.005) {
         let backgrounds = fs.readdirSync(`${__dirname}/assets/images/background/easterEgg`);
         let Background = backgrounds[Math.floor(Math.random() * backgrounds.length)];
         background = `url(./assets/images/background/easterEgg/${Background})`;
-    } else if (fs.existsSync(`${__dirname}/assets/images/background/${theme ? 'dark' : 'light'}`)) {
-        let backgrounds = fs.readdirSync(`${__dirname}/assets/images/background/${theme ? 'dark' : 'light'}`);
+    } else if (fs.existsSync(`${__dirname}/assets/images/background/dark`)) {
+        let backgrounds = fs.readdirSync(`${__dirname}/assets/images/background/dark`);
         let Background = backgrounds[Math.floor(Math.random() * backgrounds.length)];
-        background = `linear-gradient(#00000080, #00000080), url(./assets/images/background/${theme ? 'dark' : 'light'}/${Background})`;
+        background = `linear-gradient(#00000080, #00000080), url(./assets/images/background/dark/${Background})`;
     }
-    body.style.backgroundImage = background ? background : theme ? '#000' : '#fff';
+    body.style.backgroundImage = background || '#000';
     body.style.backgroundSize = 'cover';
 }
 
 async function changePanel(id) {
     let panel = document.querySelector(`.${id}`);
     let active = document.querySelector(`.active`)
-    if (active) active.classList.toggle("active");
+    if (!panel || panel === active) return;
+    if (active) active.classList.remove("active");
     panel.classList.add("active");
 }
 
@@ -147,5 +209,6 @@ export {
     accountSelect as accountSelect,
     slider as Slider,
     pkg as pkg,
-    setStatus as setStatus
+    setStatus as setStatus,
+    applyVisualTheme as applyVisualTheme
 }

@@ -6,7 +6,7 @@
 const { ipcRenderer, shell } = require('electron');
 const pkg = require('../package.json');
 const os = require('os');
-import { config, database } from './utils.js';
+import { config } from './utils.js';
 const nodeFetch = require("node-fetch");
 
 
@@ -18,11 +18,7 @@ class Splash {
         this.message = document.querySelector(".message");
         this.progress = document.querySelector(".progress");
         document.addEventListener('DOMContentLoaded', async () => {
-            let databaseLauncher = new database();
-            let configClient = await databaseLauncher.readData('configClient');
-            let theme = configClient?.launcher_config?.theme || "auto"
-            let isDarkTheme = await ipcRenderer.invoke('is-dark-theme', theme).then(res => res)
-            document.body.className = isDarkTheme ? 'dark global' : 'light global';
+            document.body.className = 'dark global';
             if (process.platform == 'win32') ipcRenderer.send('update-window-progress-load')
             this.startAnimation()
         });
@@ -38,16 +34,16 @@ class Splash {
         let splash = splashes[Math.floor(Math.random() * splashes.length)];
         this.splashMessage.textContent = splash.message;
         this.splashAuthor.children[0].textContent = "@" + splash.author;
-        await sleep(100);
+        await sleep(60);
         document.querySelector("#splash").style.display = "block";
-        await sleep(500);
+        await sleep(180);
         this.splash.classList.add("opacity");
-        await sleep(500);
+        await sleep(260);
         this.splash.classList.add("translate");
         this.splashMessage.classList.add("opacity");
         this.splashAuthor.classList.add("opacity");
         this.message.classList.add("opacity");
-        await sleep(1000);
+        await sleep(450);
         this.checkUpdate();
     }
 

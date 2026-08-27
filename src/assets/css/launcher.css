@@ -4,6 +4,13 @@
 @import 'panels/home.css';
 @import 'panels/settings.css';
 
+html,
+body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
 body {
     margin: 0;
     padding: 0;
@@ -22,6 +29,13 @@ img {
     outline: none;
 }
 
+button:focus-visible,
+[role="button"]:focus-visible,
+input:focus-visible {
+    outline: 3px solid var(--theme-accent, #ce8b2c);
+    outline-offset: 3px;
+}
+
 input::-webkit-outer-spin-button,
 input::-webkit-inner-spin-button {
     -webkit-appearance: none;
@@ -30,10 +44,15 @@ input::-webkit-inner-spin-button {
 
 .content-scroll {
     overflow: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
 }
 
 .content-scroll::-webkit-scrollbar {
     width: 0;
+    height: 0;
+    display: none;
 }
 
 .dragbar {
@@ -181,15 +200,55 @@ input::-webkit-inner-spin-button {
 
 .panel {
     position: absolute;
-    width: 100%;
-    height: 100%;
+    inset: 0;
+    overflow: hidden;
     opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px) scale(0.995);
     z-index: 0;
     pointer-events: none;
+    transition:
+        opacity var(--motion-panel) var(--ease-out),
+        transform var(--motion-panel) var(--ease-out),
+        visibility 0s linear var(--motion-panel);
+    will-change: opacity, transform;
 }
 
 .active {
     opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
     z-index: 1;
     pointer-events: all;
+    transition-delay: 0s;
+}
+
+::view-transition-old(root) {
+    animation: themeFadeOut 160ms var(--ease-in) both;
+}
+
+::view-transition-new(root) {
+    animation: themeFadeIn var(--motion-theme) var(--ease-out) both;
+}
+
+@keyframes themeFadeOut {
+    to { opacity: 0.15; transform: scale(0.995); }
+}
+
+@keyframes themeFadeIn {
+    from { opacity: 0; transform: scale(1.005); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .panel,
+    .active {
+        transform: none;
+        transition-duration: 0.01ms;
+    }
+
+    ::view-transition-old(root),
+    ::view-transition-new(root) {
+        animation-duration: 0.01ms;
+    }
 }

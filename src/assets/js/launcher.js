@@ -8,7 +8,7 @@ import Home from './panels/home.js';
 import Settings from './panels/settings.js';
 
 // import modules
-import { logger, config, changePanel, database, popup, setBackground, accountSelect, addAccount, pkg } from './utils.js';
+import { logger, config, changePanel, database, popup, setBackground, applyVisualTheme, accountSelect, addAccount, pkg } from './utils.js';
 const { AZauth, Microsoft, Mojang } = require('minecraft-java-core');
 
 // libs
@@ -34,6 +34,8 @@ class Launcher {
         this.db = new database();
         await this.initConfigClient();
         this.createPanels(Login, Home, Settings);
+        const configClient = await this.db.readData('configClient');
+        applyVisualTheme(configClient?.launcher_config?.visualTheme || 'beer');
         this.startLauncher();
     }
 
@@ -114,7 +116,7 @@ class Launcher {
                 },
                 launcher_config: {
                     download_multi: 5,
-                    theme: 'auto',
+                    visualTheme: 'beer',
                     closeLauncher: 'close-launcher',
                     intelEnabledMac: true
                 }

@@ -75,6 +75,12 @@ class Home {
                 month: 'Janvier'
             }));
         }
+        requestAnimationFrame(() => {
+            newsElement.querySelectorAll('.news-block').forEach((block, index) => {
+                block.style.setProperty('--news-index', Math.min(index, 5));
+            });
+            newsElement.classList.add('news-ready');
+        });
     }
 
     createNewsBlock({ title, content, author, day, month }) {
@@ -211,7 +217,7 @@ class Home {
                 await this.db.updateData('configClient', configClient)
                 instanceSelect = newInstanceSelect
                 if (selectedInstanceName) selectedInstanceName.textContent = newInstanceSelect
-                instancePopup.style.display = 'none'
+                this.closeInstancePopup(instancePopup)
                 let instance = await config.getInstanceList()
                 let options = instance.find(i => i.name == configClient.instance_selct)
                 await setStatus(options?.status)
@@ -237,14 +243,33 @@ class Home {
                 }
             }
 
-            instancePopup.style.display = 'flex'
+            this.openInstancePopup(instancePopup)
         })
 
         playBTN?.addEventListener('click', async () => {
+            if (playBTN.disabled || playBTN.classList.contains('is-activating')) return;
+            playBTN.classList.add('is-activating');
+            await new Promise(resolve => setTimeout(resolve, 180));
+            playBTN.classList.remove('is-activating');
             await this.startGame()
         })
 
-        instanceCloseBTN?.addEventListener('click', () => instancePopup.style.display = 'none')
+        instanceCloseBTN?.addEventListener('click', () => this.closeInstancePopup(instancePopup))
+        instancePopup.addEventListener('click', e => {
+            if (e.target === instancePopup) this.closeInstancePopup(instancePopup);
+        })
+    }
+
+    openInstancePopup(instancePopup) {
+        instancePopup.style.display = 'flex';
+        requestAnimationFrame(() => instancePopup.classList.add('is-open'));
+    }
+
+    closeInstancePopup(instancePopup) {
+        instancePopup.classList.remove('is-open');
+        setTimeout(() => {
+            if (!instancePopup.classList.contains('is-open')) instancePopup.style.display = 'none';
+        }, 230);
     }
 
     createInstanceElement(instance, instanceSelect) {

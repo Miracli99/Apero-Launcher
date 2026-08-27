@@ -19,7 +19,7 @@ img {
     transform: translate(-50%);
     width: 140px;
     height: 140px;
-    transition: opacity .3s, top 1.5s;
+    transition: opacity 240ms var(--ease-out), top 420ms var(--ease-out);
     opacity: 0;
 }
 
@@ -39,7 +39,7 @@ img {
     font: normal normal bold 19px/29px Poppins;
     text-align: center;
     letter-spacing: 0px;
-    transition: opacity 1.5s;
+    transition: opacity 320ms var(--ease-out);
     color: var(--color);
     opacity: 0;
 }
@@ -54,7 +54,7 @@ img {
     left: 0px;
     width: 400px;
     text-align: center;
-    transition: opacity 1.5s;
+    transition: opacity 320ms var(--ease-out);
     font: normal normal normal 9px/13px Poppins;
     color: var(--color);
     opacity: 0;
@@ -74,7 +74,7 @@ img {
     left: 0px;
     width: 400px;
     text-align: center;
-    transition: opacity 1.5s;
+    transition: opacity 320ms var(--ease-out);
     font: normal normal bold 18px/27px Poppins;
     color: var(--color);
     opacity: 0;
@@ -126,4 +126,14 @@ img {
 .progress::-webkit-progress-value {
     background-color: var(--element-color);
     border-radius: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .splash,
+    .splash-message,
+    .splash-author,
+    .message,
+    .progress {
+        transition-duration: 0.01ms;
+    }
 }

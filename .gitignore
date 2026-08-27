@@ -1,8 +1,45 @@
-# Generated
-node_modules
-app
-test
-dist
-node-v*
-data
+# Dependencies
+/node_modules/
+
+# Electron build outputs
+/app/
+/dist/
+/out/
+/release/
+/node-v*/
+*.blockmap
+latest*.yml
+builder-debug.yml
+builder-effective-config.yaml
+
+# Launcher runtime and local user data
+/data/
+
+# Environment files and local secrets
+.env
+.env.*
+!.env.example
+
+# Logs, caches and test reports
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.cache/
+.eslintcache
+/coverage/
+/.nyc_output/
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+/.codex/
+/.agents/
+
+# Operating system metadata
 .DS_Store
+Thumbs.db
+Desktop.ini

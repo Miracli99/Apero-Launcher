@@ -24,7 +24,7 @@
     background-image: radial-gradient(circle, rgba(255, 255, 255, 0.25) 2px, transparent 2px);
     background-size: 120px 120px;
     opacity: 0.25;
-    animation: beerSparkle 18s linear infinite;
+    animation: none;
     pointer-events: none;
     z-index: 0;
 }
@@ -155,6 +155,8 @@
     height: calc(100% - 26px);
     opacity: 0;
     pointer-events: none;
+    transform: translateX(12px);
+    transition: opacity var(--motion-ui) var(--ease-out), transform var(--motion-ui) var(--ease-out);
 
 }
 
@@ -182,6 +184,7 @@
 
 .active-container-settings {
     opacity: 1;
+    transform: translateX(0);
     z-index: 1;
     pointer-events: all;
 }
@@ -504,45 +507,6 @@
     cursor: pointer;
 }
 
-.theme-btn {
-    margin: 0 1rem;
-    padding: calc(0.1rem + 4px) calc(1.5rem + 4px);
-    border-radius: 15px;
-    cursor: pointer;
-}
-
-.theme-btn-clair {
-    background: var(--light-color);
-    color: var(--dark-color);
-    border: 2px solid var(--dark-color);
-}
-
-.theme-btn-sombre {
-    background: var(--dark-color);
-    color: var(--light-color);
-    border: 2px solid var(--color);
-}
-
-.theme-btn-auto {
-    background: var(--background);
-    color: var(--color);
-    border: 2px solid var(--color);
-}
-
-.beer-theme .theme-btn {
-    background: rgba(0, 0, 0, 0.4);
-    color: var(--beer-foam);
-    border: 2px solid rgba(255, 255, 255, 0.3);
-}
-
-.active-theme {
-    border: 4px solid var(--element-color);
-}
-
-.beer-theme .active-theme {
-    border-color: var(--beer-amber);
-    box-shadow: 0 0 18px rgba(206, 139, 44, 0.6);
-}
 .close-btn {
     font-size: 0.95rem;
     width: 200px;
@@ -684,5 +648,279 @@ height: 50px;
 
     100% {
         transform: translateY(0);
+    }
+}
+
+/* Visual theme selector */
+.visual-theme-section {
+    padding-bottom: 1.75rem;
+}
+
+.visual-theme-box {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+}
+
+.visual-theme-card {
+    min-height: 124px;
+    padding: 0.65rem;
+    border: 2px solid rgba(255, 255, 255, 0.14);
+    border-radius: 16px;
+    background: rgba(0, 0, 0, 0.28);
+    color: var(--beer-foam);
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
+}
+
+.visual-theme-card:hover {
+    border-color: var(--beer-amber);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.visual-theme-card.active-visual-theme {
+    border-color: var(--beer-amber);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.12), 0 0 22px color-mix(in srgb, var(--beer-amber) 58%, transparent);
+    animation: themeCardSelected 280ms var(--ease-out);
+}
+
+.visual-theme-card:active {
+    transform: scale(0.98);
+}
+
+@keyframes themeCardSelected {
+    0% { transform: scale(0.97); }
+    65% { transform: scale(1.015); }
+    100% { transform: scale(1); }
+}
+
+.theme-preview {
+    position: relative;
+    display: block;
+    height: 58px;
+    margin-bottom: 0.65rem;
+    overflow: hidden;
+    border-radius: 10px;
+}
+
+.theme-preview::before,
+.theme-preview::after,
+.theme-preview span {
+    content: "";
+    position: absolute;
+}
+
+.visual-theme-beer .theme-preview {
+    background: radial-gradient(circle at 70% 20%, #ffe3a1 0 5%, transparent 6%), linear-gradient(145deg, #2b1004, #b86118);
+}
+
+.visual-theme-beer .theme-preview::before {
+    left: 16px;
+    bottom: 0;
+    width: 28px;
+    height: 42px;
+    border: 3px solid #fff3cf;
+    border-radius: 6px 6px 10px 10px;
+    background: linear-gradient(to top, #df8a1c 0 68%, #fff3cf 69% 83%, transparent 84%);
+}
+
+.visual-theme-neon .theme-preview {
+    background: linear-gradient(rgba(5, 8, 28, 0.35), rgba(5, 8, 28, 0.35)), repeating-linear-gradient(90deg, transparent 0 18px, rgba(37, 241, 255, 0.3) 19px 20px), linear-gradient(145deg, #08091d, #331052);
+}
+
+.visual-theme-neon .theme-preview::before {
+    inset: 11px 24px;
+    border: 2px solid #25f1ff;
+    box-shadow: 0 0 10px #25f1ff, inset 0 0 10px #ff42d0;
+    transform: skewX(-10deg);
+}
+
+.visual-theme-coffee .theme-preview {
+    background: radial-gradient(circle at 80% 20%, #d9b779 0 4%, transparent 5%), linear-gradient(145deg, #21130f, #75472d);
+}
+
+.visual-theme-coffee .theme-preview::before {
+    left: 17px;
+    bottom: 10px;
+    width: 35px;
+    height: 25px;
+    border-radius: 4px 4px 12px 12px;
+    background: linear-gradient(#f3dfbf 0 22%, #48281d 23%);
+    box-shadow: 22px 2px 0 -7px transparent, 22px 2px 0 -4px #f3dfbf;
+}
+
+.visual-theme-forest .theme-preview {
+    background: radial-gradient(circle at 72% 24%, #ffd86b 0 3%, transparent 4%), radial-gradient(circle at 22% 70%, #8ee6a3 0 2%, transparent 3%), linear-gradient(145deg, #071b17, #24573d);
+}
+
+.visual-theme-forest .theme-preview::before {
+    left: 23px;
+    bottom: -13px;
+    width: 42px;
+    height: 56px;
+    border: 4px solid #75c98b;
+    border-radius: 50% 50% 8px 8px;
+    box-shadow: 0 0 12px rgba(117, 201, 139, 0.75);
+}
+
+.theme-card-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.theme-card-copy strong {
+    font-size: 0.78rem;
+}
+
+.theme-card-copy small {
+    color: rgba(255, 255, 255, 0.64);
+    font-size: 0.62rem;
+}
+
+/* Settings scenery follows the selected visual universe. */
+body[data-visual-theme="neon"] .settings .beer-theme {
+    --beer-amber: #25f1ff;
+    --beer-amber-dark: #8a2be2;
+    --beer-foam: #f4f2ff;
+    background: radial-gradient(circle at 80% 15%, rgba(255, 66, 208, 0.22), transparent 36%), linear-gradient(125deg, #050719, #16113c 55%, #40115a);
+}
+
+body[data-visual-theme="neon"] .settings .beer-theme::before {
+    background-image: linear-gradient(rgba(37, 241, 255, 0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(37, 241, 255, 0.12) 1px, transparent 1px);
+    background-size: 44px 44px;
+}
+
+body[data-visual-theme="neon"] .beer-theme .nav-settings {
+    background: linear-gradient(180deg, #100b2d, #08091c);
+    border-right-color: rgba(37, 241, 255, 0.28);
+}
+
+body[data-visual-theme="neon"] .beer-foam-top,
+body[data-visual-theme="coffee"] .beer-foam-top,
+body[data-visual-theme="forest"] .beer-foam-top {
+    opacity: 0;
+}
+
+body[data-visual-theme="neon"] .beer-mug {
+    width: 84px;
+    height: 54px;
+    border: 3px solid #25f1ff;
+    border-radius: 8px;
+    box-shadow: 0 0 18px rgba(37, 241, 255, 0.75), inset 0 0 16px rgba(255, 66, 208, 0.32);
+    transform: skewX(-8deg);
+}
+
+body[data-visual-theme="neon"] .beer-liquid {
+    inset: auto 9px 9px;
+    height: 5px;
+    background: #ff42d0;
+    box-shadow: 0 0 12px #ff42d0;
+    animation: neonSettingsPulse 4.5s ease-in-out infinite;
+}
+
+body[data-visual-theme="neon"] .beer-bubble,
+body[data-visual-theme="coffee"] .beer-bubble {
+    display: none;
+}
+
+body[data-visual-theme="coffee"] .settings .beer-theme {
+    --beer-amber: #d6a766;
+    --beer-amber-dark: #6e3f28;
+    --beer-foam: #fff3df;
+    background: radial-gradient(circle at 75% 15%, rgba(236, 205, 157, 0.2), transparent 38%), linear-gradient(125deg, #1d100d, #4a2a1e 55%, #80543a);
+}
+
+body[data-visual-theme="coffee"] .settings .beer-theme::before {
+    background-image: radial-gradient(ellipse, rgba(247, 221, 184, 0.28) 0 3px, transparent 4px);
+    background-size: 76px 58px;
+}
+
+body[data-visual-theme="coffee"] .beer-theme .nav-settings {
+    background: linear-gradient(180deg, #3d241c, #211310);
+}
+
+body[data-visual-theme="coffee"] .beer-mug {
+    height: 52px;
+    border-color: #f4dfbd;
+    border-radius: 7px 7px 18px 18px;
+}
+
+body[data-visual-theme="coffee"] .beer-liquid {
+    inset: 8px 8px 10px;
+    background: linear-gradient(#f0d5ad 0 22%, #4b291e 24%);
+}
+
+body[data-visual-theme="forest"] .settings .beer-theme {
+    --beer-amber: #91d39b;
+    --beer-amber-dark: #376f4b;
+    --beer-foam: #f1f6df;
+    background: radial-gradient(circle at 75% 18%, rgba(255, 216, 107, 0.18), transparent 32%), linear-gradient(125deg, #061711, #123d2b 55%, #315c3e);
+}
+
+body[data-visual-theme="forest"] .settings .beer-theme::before {
+    background-image: radial-gradient(circle, rgba(255, 216, 107, 0.62) 0 2px, transparent 3px);
+    background-size: 92px 68px;
+}
+
+body[data-visual-theme="forest"] .beer-theme .nav-settings {
+    background: linear-gradient(180deg, #173d2b, #081c15);
+}
+
+body[data-visual-theme="forest"] .beer-mug {
+    width: 72px;
+    height: 72px;
+    border-color: #91d39b;
+    border-radius: 50% 50% 12px 12px;
+    box-shadow: 0 0 22px rgba(145, 211, 155, 0.45);
+}
+
+body[data-visual-theme="forest"] .beer-liquid {
+    inset: 10px;
+    border-radius: 50% 50% 8px 8px;
+    background: radial-gradient(circle at 50% 35%, #ffd86b 0 5%, transparent 6%), linear-gradient(145deg, #376f4b, #79b889);
+}
+
+body[data-visual-theme="forest"] .beer-bubble {
+    width: 7px;
+    height: 7px;
+    border: 0;
+    background: #ffd86b;
+    box-shadow: 0 0 10px #ffd86b;
+    animation-name: forestFirefly;
+}
+
+@keyframes neonSettingsPulse {
+    0%, 100% { opacity: 0.55; transform: scaleX(0.72); }
+    50% { opacity: 1; transform: scaleX(1); }
+}
+
+@keyframes forestFirefly {
+    0%, 100% { transform: translate3d(0, 0, 0); opacity: 0.15; }
+    35% { transform: translate3d(9px, -32px, 0); opacity: 1; }
+    70% { transform: translate3d(-7px, -68px, 0); opacity: 0.55; }
+}
+
+@media (max-width: 1050px) {
+    .visual-theme-box {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .settings .container.beer-theme::before,
+    .beer-liquid,
+    .beer-bubble {
+        animation: none !important;
+    }
+
+    .container-settings,
+    .visual-theme-card {
+        transform: none !important;
+        transition-duration: 0.01ms !important;
+        animation: none !important;
     }
 }
