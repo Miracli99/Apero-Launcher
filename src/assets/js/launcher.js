@@ -19,7 +19,39 @@ const os = require('os');
 const MICROSOFT_FALLBACK_CLIENT_ID = '00000000402b5328';
 
 function getAccountErrorMessage(error) {
-    return error?.errorMessage || error?.message || error?.error || 'Erreur inconnue';
+    if (error == null) return 'Erreur inconnue';
+    if (typeof error === 'string') return error;
+    return getAccountErrorMessage(error.errorMessage || error.message || error.error);
+}
+
+async function refreshMicrosoftAccount(account, configuredClientId) {
+    const storedClientId = account.meta?.client_id;
+    const candidateClientIds = storedClientId
+        ? [storedClientId]
+        : [configuredClientId, MICROSOFT_FALLBACK_CLIENT_ID].filter((clientId, index, values) => clientId && values.indexOf(clientId) === index);
+    let lastError = { error: 'Impossible de renouveler la session Microsoft.' };
+
+    for (const clientId of candidateClientIds) {
+        try {
+            const refreshedAccount = await new Microsoft(clientId).refresh(account);
+            if (!refreshedAccount?.error) {
+                const refreshedMeta = {
+                    ...account.meta,
+                    ...refreshedAccount.meta,
+                    client_id: clientId
+                };
+                delete refreshedMeta.requires_reauth;
+                delete refreshedMeta.refresh_error;
+                refreshedAccount.meta = refreshedMeta;
+                return { account: refreshedAccount, clientId, migrated: !storedClientId };
+            }
+            lastError = refreshedAccount;
+        } catch (error) {
+            lastError = error;
+        }
+    }
+
+    return { error: lastError };
 }
 
 class Launcher {
@@ -141,6 +173,7 @@ class Launcher {
         let configClient = await this.db.readData('configClient')
         let account_selected = configClient ? configClient.account_selected : null
         let popupRefresh = new popup();
+        const microsoftAccountsToReconnect = [];
 
         if (accounts?.length) {
             for (let account of accounts) {
@@ -154,7 +187,7 @@ class Launcher {
                     continue
                 }
                 if (account.meta.type === 'Xbox') {
-                    const clientId = account.meta?.client_id ?? this.config?.client_id ?? MICROSOFT_FALLBACK_CLIENT_ID;
+                    const configuredClientId = this.config?.client_id ?? MICROSOFT_FALLBACK_CLIENT_ID;
                     console.log(`Account Type: ${account.meta.type} | Username: ${account.name}`);
                     popupRefresh.openPopup({
                         title: 'Connexion',
@@ -163,21 +196,31 @@ class Launcher {
                         background: false
                     });
 
-                    let refresh_accounts = await new Microsoft(clientId).refresh(account);
+                    const refreshResult = await refreshMicrosoftAccount(account, configuredClientId);
 
-                    if (refresh_accounts.error) {
-                        await this.db.deleteData('accounts', account_ID)
+                    if (refreshResult.error) {
+                        const errorMessage = getAccountErrorMessage(refreshResult.error);
+                        account.meta = {
+                            ...account.meta,
+                            requires_reauth: true,
+                            refresh_error: errorMessage
+                        };
+                        await this.db.updateData('accounts', account, account_ID)
                         if (account_ID == account_selected) {
                             configClient.account_selected = null
                             await this.db.updateData('configClient', configClient)
                         }
-                        console.error(`[Account] ${account.name}: ${getAccountErrorMessage(refresh_accounts)}`);
+                        microsoftAccountsToReconnect.push(account.name);
+                        console.error(`[Account] ${account.name}: ${errorMessage}`);
                         continue;
                     }
 
+                    let refresh_accounts = refreshResult.account;
                     refresh_accounts.ID = account_ID
-                    refresh_accounts.meta = { ...refresh_accounts.meta, client_id: clientId }
                     await this.db.updateData('accounts', refresh_accounts, account_ID)
+                    if (refreshResult.migrated) {
+                        console.log(`[Account] Migration du client Microsoft terminée pour ${account.name}.`);
+                    }
                     await addAccount(refresh_accounts)
                     if (account_ID == account_selected) accountSelect(refresh_accounts)
                 } else if (account.meta.type == 'AZauth') {
@@ -248,7 +291,7 @@ class Launcher {
                 }
             }
 
-            accounts = await this.db.readAllData('accounts')
+            accounts = (await this.db.readAllData('accounts')).filter(account => !account.meta?.requires_reauth)
             configClient = await this.db.readData('configClient')
             account_selected = configClient ? configClient.account_selected : null
 
@@ -256,7 +299,16 @@ class Launcher {
                 configClient.account_selected = null
                 await this.db.updateData('configClient', configClient);
                 popupRefresh.closePopup()
-                return changePanel("login");
+                changePanel("login");
+                if (microsoftAccountsToReconnect.length) {
+                    popupRefresh.openPopup({
+                        title: 'Reconnexion Microsoft nécessaire',
+                        content: `La session de ${microsoftAccountsToReconnect.join(', ')} n'a pas pu être renouvelée. Le compte a été conservé : reconnectez-vous pour le mettre à jour.`,
+                        color: 'var(--color)',
+                        options: true
+                    });
+                }
+                return;
             }
 
             if (!account_selected) {

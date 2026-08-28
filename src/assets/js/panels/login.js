@@ -234,7 +234,24 @@ class Login {
             connectionData.meta = { ...connectionData.meta, client_id: clientId };
         }
         let configClient = await this.db.readData('configClient');
-        let account = await this.db.createData('accounts', connectionData)
+        let account;
+        if (connectionData?.meta?.type === 'Xbox') {
+            const savedAccounts = await this.db.readAllData('accounts');
+            const existingAccount = savedAccounts.find(savedAccount => {
+                if (savedAccount.meta?.type !== 'Xbox') return false;
+                if (connectionData.uuid && savedAccount.uuid === connectionData.uuid) return true;
+                return savedAccount.name === connectionData.name;
+            });
+
+            if (existingAccount) {
+                const refreshedMeta = { ...existingAccount.meta, ...connectionData.meta };
+                delete refreshedMeta.requires_reauth;
+                delete refreshedMeta.refresh_error;
+                account = { ...connectionData, ID: existingAccount.ID, meta: refreshedMeta };
+                await this.db.updateData('accounts', account, existingAccount.ID);
+            }
+        }
+        if (!account) account = await this.db.createData('accounts', connectionData)
         let instanceSelect = configClient.instance_selct
         let instancesList = await config.getInstanceList()
         configClient.account_selected = account.ID;

@@ -7,6 +7,47 @@ import { config, database, logger, changePanel, appdata, setStatus, pkg, popup }
 const { Launch } = require('minecraft-java-core')
 const { shell, ipcRenderer } = require('electron')
 const path = require('path')
+const fs = require('fs')
+
+const PATCH_WARNING_DELAY = 90 * 1000;
+const PATCH_HELP_DELAY = 5 * 60 * 1000;
+const MAX_LAUNCH_LOG_SIZE = 2 * 1024 * 1024;
+
+function formatLaunchError(error) {
+    if (error == null) return 'Erreur inconnue';
+    if (typeof error === 'string') return error;
+    if (error.error || error.message || error.errorMessage) {
+        return formatLaunchError(error.error || error.message || error.errorMessage);
+    }
+    try {
+        return JSON.stringify(error);
+    } catch (serializationError) {
+        return 'Erreur inconnue';
+    }
+}
+
+function prepareLaunchLog(instancePath) {
+    const logDirectory = path.join(instancePath, 'launcher-logs');
+    const logPath = path.join(logDirectory, 'latest.log');
+    const previousLogPath = path.join(logDirectory, 'previous.log');
+
+    fs.mkdirSync(logDirectory, { recursive: true });
+    if (fs.existsSync(logPath) && fs.statSync(logPath).size > MAX_LAUNCH_LOG_SIZE) {
+        if (fs.existsSync(previousLogPath)) fs.rmSync(previousLogPath);
+        fs.renameSync(logPath, previousLogPath);
+    }
+
+    return logPath;
+}
+
+function appendLaunchLog(logPath, event, value = '') {
+    try {
+        const message = String(value ?? '').trim();
+        fs.appendFileSync(logPath, `[${new Date().toISOString()}] [${event}] ${message}\n`, 'utf8');
+    } catch (error) {
+        console.error(`Impossible d'écrire le journal de lancement : ${error.message}`);
+    }
+}
 
 function appendTextWithBreaks(element, value) {
     const lines = String(value || '').split(/\r?\n/);
@@ -305,6 +346,65 @@ class Home {
             const appDataPath = await appdata();
             const dataDirectoryName = process.platform === 'darwin' ? this.config.dataDirectory : `.${this.config.dataDirectory}`;
             const instancePath = path.join(appDataPath, dataDirectoryName);
+            const launchLogPath = prepareLaunchLog(instancePath);
+            const loaderLabel = loaderConfig.loadder_type?.toLowerCase() === 'neoforge' ? 'NeoForge' : 'Forge';
+            let phaseStartedAt = null;
+            let lastPhaseActivityAt = null;
+            let phaseHelpDisplayed = false;
+            let phaseWatchdog = null;
+            let activePhaseLabel = null;
+
+            const stopPhaseWatchdog = () => {
+                if (phaseWatchdog) clearInterval(phaseWatchdog);
+                phaseWatchdog = null;
+                phaseStartedAt = null;
+                lastPhaseActivityAt = null;
+                phaseHelpDisplayed = false;
+                activePhaseLabel = null;
+            };
+
+            const noteLaunchActivity = (event, value) => {
+                appendLaunchLog(launchLogPath, event, value);
+                if (phaseStartedAt) lastPhaseActivityAt = Date.now();
+            };
+
+            const startPhaseWatchdog = (phaseLabel) => {
+                const now = Date.now();
+                if (activePhaseLabel !== phaseLabel) {
+                    activePhaseLabel = phaseLabel;
+                    phaseStartedAt = now;
+                    phaseHelpDisplayed = false;
+                }
+                lastPhaseActivityAt = now;
+                if (phaseWatchdog) return;
+
+                phaseWatchdog = setInterval(() => {
+                    const currentTime = Date.now();
+                    const inactiveFor = currentTime - lastPhaseActivityAt;
+                    const phaseDuration = currentTime - phaseStartedAt;
+                    const elapsedMinutes = Math.max(1, Math.floor(phaseDuration / 60000));
+
+                    if (inactiveFor >= PATCH_WARNING_DELAY) {
+                        const slowPhaseLabel = activePhaseLabel === 'Finalisation'
+                            ? 'Finalisation lente'
+                            : `${activePhaseLabel} lent`;
+                        infoStarting.textContent = `${slowPhaseLabel} (${elapsedMinutes} min)...`;
+                    }
+
+                    if (phaseDuration >= PATCH_HELP_DELAY && !phaseHelpDisplayed) {
+                        phaseHelpDisplayed = true;
+                        appendLaunchLog(launchLogPath, 'WATCHDOG', `${activePhaseLabel} sans fin après ${elapsedMinutes} minutes.`);
+                        new popup().openPopup({
+                            title: 'Traitement anormalement long',
+                            content: `Le traitement est toujours actif. Ne relancez pas Minecraft tant qu'un processus Java est en cours. Le diagnostic a été enregistré dans :\n${launchLogPath}`,
+                            color: '#e6a23c',
+                            options: true
+                        });
+                    }
+                }, 15000);
+            };
+
+            appendLaunchLog(launchLogPath, 'START', `${options.name} - Minecraft ${loaderConfig.minecraft_version} - ${loaderConfig.loadder_type} ${loaderConfig.loadder_version}`);
 
             let opt = {
                 url: options.url,
@@ -354,10 +454,13 @@ class Home {
 
             launch.on('extract', extract => {
                 ipcRenderer.send('main-window-progress-load')
+                noteLaunchActivity('EXTRACT', extract);
                 console.log(extract);
             });
 
             launch.on('progress', (progress, size) => {
+                stopPhaseWatchdog();
+                appendLaunchLog(launchLogPath, 'DOWNLOAD', `${progress}/${size}`);
                 infoStarting.textContent = `Téléchargement ${((progress / size) * 100).toFixed(0)}%`
                 ipcRenderer.send('main-window-progress', { progress, size })
                 progressBar.value = progress;
@@ -365,10 +468,15 @@ class Home {
             });
 
             launch.on('check', (progress, size) => {
-                infoStarting.textContent = `Vérification ${((progress / size) * 100).toFixed(0)}%`
-                ipcRenderer.send('main-window-progress', { progress, size })
-                progressBar.value = progress;
+                stopPhaseWatchdog();
+                const checkedFiles = Math.min(Number(progress) + 1, Number(size));
+                const percentage = size > 0 ? ((checkedFiles / size) * 100).toFixed(0) : 100;
+                appendLaunchLog(launchLogPath, 'CHECK', `${checkedFiles}/${size}`);
+                infoStarting.textContent = checkedFiles >= size ? `Finalisation du lancement...` : `Vérification ${percentage}%`
+                ipcRenderer.send('main-window-progress', { progress: checkedFiles, size })
+                progressBar.value = checkedFiles;
                 progressBar.max = size;
+                if (checkedFiles >= size) startPhaseWatchdog('Finalisation');
             });
 
             launch.on('estimated', (time) => {
@@ -383,12 +491,16 @@ class Home {
             })
 
             launch.on('patch', patch => {
+                startPhaseWatchdog(`Patch ${loaderLabel}`);
+                noteLaunchActivity('PATCH', patch);
                 console.log(patch);
                 ipcRenderer.send('main-window-progress-load')
-                infoStarting.textContent = `Patch en cours...`
+                infoStarting.textContent = `Patch ${loaderLabel} en cours...`
             });
 
             launch.on('data', (e) => {
+                stopPhaseWatchdog();
+                appendLaunchLog(launchLogPath, 'MINECRAFT', e);
                 progressBar.style.display = "none"
                 if (configClient.launcher_config.closeLauncher == 'close-launcher') {
                     ipcRenderer.send("main-window-hide")
@@ -400,6 +512,8 @@ class Home {
             })
 
             launch.on('close', code => {
+                stopPhaseWatchdog();
+                appendLaunchLog(launchLogPath, 'CLOSE', code);
                 if (configClient.launcher_config.closeLauncher == 'close-launcher') {
                     ipcRenderer.send("main-window-show")
                 };
@@ -414,11 +528,14 @@ class Home {
             });
 
             launch.on('error', err => {
+                stopPhaseWatchdog();
+                const errorMessage = formatLaunchError(err);
+                appendLaunchLog(launchLogPath, 'ERROR', errorMessage);
                 let popupError = new popup()
 
                 popupError.openPopup({
                     title: 'Erreur',
-                    content: err.error,
+                    content: `${errorMessage}\n\nJournal : ${launchLogPath}`,
                     color: 'red',
                     options: true
                 })
