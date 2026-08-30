@@ -65,10 +65,10 @@ class Launcher {
         if (await this.config.error) return this.errorConnect()
         this.db = new database();
         await this.initConfigClient();
-        this.createPanels(Login, Home, Settings);
+        await this.createPanels(Login, Home, Settings);
         const configClient = await this.db.readData('configClient');
         applyVisualTheme(configClient?.launcher_config?.visualTheme || 'beer');
-        this.startLauncher();
+        await this.startLauncher();
     }
 
     initLog() {
@@ -156,7 +156,7 @@ class Launcher {
         }
     }
 
-    createPanels(...panels) {
+    async createPanels(...panels) {
         let panelsElem = document.querySelector('.panels')
         for (let panel of panels) {
             console.log(`Initializing ${panel.name} Panel...`);
@@ -164,7 +164,7 @@ class Launcher {
             div.classList.add('panel', panel.id)
             div.innerHTML = fs.readFileSync(`${__dirname}/panels/${panel.id}.html`, 'utf8');
             panelsElem.appendChild(div);
-            new panel().init(this.config);
+            await new panel().init(this.config);
         }
     }
 

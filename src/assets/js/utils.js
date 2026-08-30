@@ -117,6 +117,7 @@ async function addAccount(data) {
     let div = document.createElement("div");
     div.classList.add("account");
     div.id = data.ID;
+    document.getElementById(`${data.ID}`)?.remove();
 
     let profileImage = document.createElement("div");
     profileImage.classList.add("profile-image");
@@ -150,6 +151,18 @@ async function addAccount(data) {
 }
 
 async function accountSelect(data) {
+    const selectedProfileName = document.querySelector('.selected-profile-name');
+    const selectedInstanceName = document.querySelector('.selected-instance-name');
+    const playButton = document.querySelector('.play-btn');
+    const hasUsableProfile = Boolean(data?.name && data?.uuid && data?.access_token);
+    const hasSelectedInstance = !selectedInstanceName || !['Aucune', '-'].includes(selectedInstanceName.textContent);
+
+    if (selectedProfileName) selectedProfileName.textContent = data?.name || 'Aucun';
+    if (playButton) {
+        playButton.toggleAttribute('disabled', !hasUsableProfile || !hasSelectedInstance);
+        playButton.classList.toggle('disabled', !hasUsableProfile || !hasSelectedInstance);
+    }
+
     let account = document.getElementById(`${data.ID}`);
     let activeAccount = document.querySelector('.account-select')
 
@@ -157,6 +170,7 @@ async function accountSelect(data) {
     if (!account) return;
     account.classList.add('account-select');
     if (data?.profile?.skins[0]?.base64) headplayer(data.profile.skins[0].base64);
+    else document.querySelector(".player-head")?.style.removeProperty('background-image');
 }
 
 async function headplayer(skinBase64) {

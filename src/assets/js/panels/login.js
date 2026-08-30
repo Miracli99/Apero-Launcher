@@ -19,6 +19,15 @@ function getErrorMessage(err) {
     return 'Erreur inconnue';
 }
 
+function validateMicrosoftProfile(account) {
+    if (account?.error) return getErrorMessage(account);
+    if (account?.meta?.type !== 'Xbox') return 'La connexion Microsoft n’a retourné aucun profil Xbox valide.';
+    if (!account.name || !account.uuid || !account.access_token) {
+        return 'Le compte Microsoft est connecté, mais aucun profil Minecraft Java complet n’a été reçu. Vérifiez que ce compte possède Minecraft Java, puis reconnectez-vous.';
+    }
+    return null;
+}
+
 class Login {
     static id = "login";
     async init(config) {
@@ -58,10 +67,20 @@ class Login {
                 if (account_connect == 'cancel' || !account_connect) {
                     popupLogin.closePopup();
                     return;
-                } else {
-                    await this.saveData(account_connect)
-                    popupLogin.closePopup();
                 }
+
+                const profileError = validateMicrosoftProfile(account_connect);
+                if (profileError) {
+                    popupLogin.openPopup({
+                        title: 'Profil Minecraft introuvable',
+                        content: profileError,
+                        options: true
+                    });
+                    return;
+                }
+
+                await this.saveData(account_connect)
+                popupLogin.closePopup();
 
             }).catch(err => {
                 popupLogin.openPopup({

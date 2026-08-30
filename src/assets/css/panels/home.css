@@ -537,6 +537,15 @@
     box-shadow: 0 0 12px color-mix(in srgb, var(--taproom-amber) 60%, transparent);
 }
 
+.launch-stage-detail {
+    min-height: 2.4em;
+    margin-top: 0.45rem;
+    color: color-mix(in srgb, var(--taproom-muted) 82%, white);
+    font-size: 0.76rem;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+
 .settings-btn {
     width: 3rem;
     height: 3rem;

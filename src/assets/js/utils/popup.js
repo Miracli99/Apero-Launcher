@@ -3,7 +3,7 @@
  * Luuxis License v1.0 (voir fichier LICENSE pour les détails en FR/EN)
  */
 
-const { ipcRenderer } = require('electron');
+const { ipcRenderer, shell } = require('electron');
 
 function formatPopupContent(content) {
     if (content == null) return '';
@@ -34,31 +34,46 @@ export default class popup {
         this.popupContent = document.querySelector('.popup-content');
         this.popupOptions = document.querySelector('.popup-options');
         this.popupButton = document.querySelector('.popup-button');
+        this.popupActionButton = document.querySelector('.popup-action-button');
     }
 
     openPopup(info) {
         this.popup.style.display = 'flex';
+        this.popup.setAttribute('aria-hidden', 'false');
         if (info.background == false) this.popup.style.background = 'none';
         else this.popup.style.background = '#000000b3'
         this.popupTitle.textContent = info.title || '';
         this.popupContent.style.color = info.color ? info.color : '#e21212';
         this.popupContent.textContent = formatPopupContent(info.content);
 
-        if (info.options) this.popupOptions.style.display = 'flex';
+        if (info.options || info.openPath) this.popupOptions.style.display = 'flex';
+
+        if (info.openPath) {
+            this.popupActionButton.style.display = 'block';
+            this.popupActionButton.textContent = info.openPathLabel || 'Ouvrir le journal';
+            this.popupActionButton.onclick = () => shell.showItemInFolder(info.openPath);
+        } else {
+            this.popupActionButton.style.display = 'none';
+            this.popupActionButton.onclick = null;
+        }
 
         if (this.popupOptions.style.display !== 'none') {
             this.popupButton.onclick = () => {
                 if (info.exit) return ipcRenderer.send('main-window-close');
                 this.closePopup();
             }
+            requestAnimationFrame(() => (info.openPath ? this.popupActionButton : this.popupButton).focus());
         }
     }
 
     closePopup() {
         this.popup.style.display = 'none';
+        this.popup.setAttribute('aria-hidden', 'true');
         this.popupTitle.textContent = '';
         this.popupContent.textContent = '';
         this.popupOptions.style.display = 'none';
         this.popupButton.onclick = null;
+        this.popupActionButton.style.display = 'none';
+        this.popupActionButton.onclick = null;
     }
 }

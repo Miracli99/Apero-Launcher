@@ -8,10 +8,11 @@ const { Launch } = require('minecraft-java-core')
 const { shell, ipcRenderer } = require('electron')
 const path = require('path')
 const fs = require('fs')
+const os = require('os')
+const { execFile } = require('child_process')
 
 const PATCH_WARNING_DELAY = 90 * 1000;
 const PATCH_HELP_DELAY = 5 * 60 * 1000;
-const MAX_LAUNCH_LOG_SIZE = 2 * 1024 * 1024;
 
 function formatLaunchError(error) {
     if (error == null) return 'Erreur inconnue';
@@ -32,20 +33,51 @@ function prepareLaunchLog(instancePath) {
     const previousLogPath = path.join(logDirectory, 'previous.log');
 
     fs.mkdirSync(logDirectory, { recursive: true });
-    if (fs.existsSync(logPath) && fs.statSync(logPath).size > MAX_LAUNCH_LOG_SIZE) {
+    if (fs.existsSync(logPath) && fs.statSync(logPath).size > 0) {
         if (fs.existsSync(previousLogPath)) fs.rmSync(previousLogPath);
         fs.renameSync(logPath, previousLogPath);
     }
+    fs.writeFileSync(logPath, '\uFEFF', 'utf8');
 
     return logPath;
 }
 
 function appendLaunchLog(logPath, event, value = '') {
     try {
-        const message = String(value ?? '').trim();
-        fs.appendFileSync(logPath, `[${new Date().toISOString()}] [${event}] ${message}\n`, 'utf8');
+        const timestamp = new Date().toISOString();
+        const lines = String(value ?? '').trim().split(/\r?\n/);
+        const output = lines.map(line => `[${timestamp}] [${event}] ${line}`).join('\n');
+        fs.appendFileSync(logPath, `${output}\n`, 'utf8');
     } catch (error) {
         console.error(`Impossible d'écrire le journal de lancement : ${error.message}`);
+    }
+}
+
+function stageDetail(value, fallback) {
+    const lines = String(value ?? '').split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+    const detail = lines.at(-1) || fallback;
+    return detail.length > 140 ? `${detail.slice(0, 137)}...` : detail;
+}
+
+function formatElapsedTime(milliseconds) {
+    return `${(milliseconds / 1000).toFixed(1)} s`;
+}
+
+function appendJavaProcessSnapshot(logPath) {
+    if (process.platform !== 'win32') {
+        appendLaunchLog(logPath, 'PROCESS', 'Capture automatique des processus Java disponible uniquement sous Windows.');
+        return;
+    }
+
+    for (const executable of ['java.exe', 'javaw.exe']) {
+        execFile('tasklist.exe', ['/FI', `IMAGENAME eq ${executable}`, '/FO', 'CSV', '/NH'], { windowsHide: true, timeout: 10000 }, (error, stdout) => {
+            const result = stdout?.trim();
+            if (error && !result) {
+                appendLaunchLog(logPath, 'PROCESS_ERROR', `${executable} : ${error.message}`);
+                return;
+            }
+            appendLaunchLog(logPath, 'PROCESS', `${executable} : ${result || 'aucun processus détecté'}`);
+        });
     }
 }
 
@@ -81,7 +113,7 @@ class Home {
         this.db = new database();
         this.news()
         this.socialLick()
-        this.instancesSelect()
+        await this.instancesSelect()
         document.querySelector('.settings-btn').addEventListener('click', e => changePanel('settings'))
     }
 
@@ -325,8 +357,10 @@ class Home {
         let profileSwitchBTN = document.querySelector('.profile-switch');
         let infoStartingBOX = document.querySelector('.info-starting-game');
         let infoStarting = document.querySelector(".info-starting-game-text");
+        let launchStageDetail = document.querySelector('.launch-stage-detail');
         let progressBar = document.querySelector('.progress-bar');
         const launch = new Launch();
+        let launchLogPath = null;
 
         try {
             let configClient = await this.db.readData('configClient');
@@ -334,6 +368,14 @@ class Home {
             let authenticator = await this.db.readData('accounts', configClient.account_selected);
             let options = instance.find(i => i.name == configClient.instance_selct);
             let loaderConfig = options?.loadder || options?.loader;
+
+            if (!authenticator) {
+                throw { error: 'Aucun profil Minecraft n’est sélectionné. Reconnectez votre compte Microsoft.' };
+            }
+
+            if (authenticator.meta?.type === 'Xbox' && (!authenticator.name || !authenticator.uuid || !authenticator.access_token)) {
+                throw { error: 'Le profil Microsoft enregistré est incomplet. Reconnectez le compte avant de lancer Minecraft.' };
+            }
 
             if (!options) {
                 throw { error: `Instance "${configClient.instance_selct}" introuvable.` };
@@ -346,21 +388,32 @@ class Home {
             const appDataPath = await appdata();
             const dataDirectoryName = process.platform === 'darwin' ? this.config.dataDirectory : `.${this.config.dataDirectory}`;
             const instancePath = path.join(appDataPath, dataDirectoryName);
-            const launchLogPath = prepareLaunchLog(instancePath);
+            launchLogPath = prepareLaunchLog(instancePath);
             const loaderLabel = loaderConfig.loadder_type?.toLowerCase() === 'neoforge' ? 'NeoForge' : 'Forge';
+            const launchStartedAt = Date.now();
             let phaseStartedAt = null;
             let lastPhaseActivityAt = null;
             let phaseHelpDisplayed = false;
             let phaseWatchdog = null;
             let activePhaseLabel = null;
+            let lastWatchdogLogAt = 0;
 
-            const stopPhaseWatchdog = () => {
+            const setLaunchStage = (title, detail) => {
+                infoStarting.textContent = title;
+                launchStageDetail.textContent = stageDetail(detail, title);
+            };
+
+            const stopPhaseWatchdog = (reason = 'étape suivante') => {
+                if (activePhaseLabel && phaseStartedAt) {
+                    appendLaunchLog(launchLogPath, 'PHASE_END', `${activePhaseLabel} - ${formatElapsedTime(Date.now() - phaseStartedAt)} - ${reason}`);
+                }
                 if (phaseWatchdog) clearInterval(phaseWatchdog);
                 phaseWatchdog = null;
                 phaseStartedAt = null;
                 lastPhaseActivityAt = null;
                 phaseHelpDisplayed = false;
                 activePhaseLabel = null;
+                lastWatchdogLogAt = 0;
             };
 
             const noteLaunchActivity = (event, value) => {
@@ -371,9 +424,13 @@ class Home {
             const startPhaseWatchdog = (phaseLabel) => {
                 const now = Date.now();
                 if (activePhaseLabel !== phaseLabel) {
+                    if (activePhaseLabel && phaseStartedAt) {
+                        appendLaunchLog(launchLogPath, 'PHASE_END', `${activePhaseLabel} - ${formatElapsedTime(now - phaseStartedAt)} - transition`);
+                    }
                     activePhaseLabel = phaseLabel;
                     phaseStartedAt = now;
                     phaseHelpDisplayed = false;
+                    appendLaunchLog(launchLogPath, 'PHASE_START', phaseLabel);
                 }
                 lastPhaseActivityAt = now;
                 if (phaseWatchdog) return;
@@ -388,23 +445,39 @@ class Home {
                         const slowPhaseLabel = activePhaseLabel === 'Finalisation'
                             ? 'Finalisation lente'
                             : `${activePhaseLabel} lent`;
-                        infoStarting.textContent = `${slowPhaseLabel} (${elapsedMinutes} min)...`;
+                        const lastKnownDetail = launchStageDetail.textContent;
+                        setLaunchStage(`${slowPhaseLabel} (${elapsedMinutes} min)...`, `Aucune nouvelle activité depuis ${Math.floor(inactiveFor / 1000)} secondes`);
+                        if (currentTime - lastWatchdogLogAt >= 60000) {
+                            lastWatchdogLogAt = currentTime;
+                            const rendererMemory = Math.round(process.memoryUsage().rss / 1048576);
+                            const freeMemory = (os.freemem() / 1073741824).toFixed(1);
+                            appendLaunchLog(launchLogPath, 'WATCHDOG_STATE', `phase=${activePhaseLabel} | durée=${formatElapsedTime(phaseDuration)} | inactivité=${formatElapsedTime(inactiveFor)} | dernier détail=${lastKnownDetail} | renderer=${rendererMemory} Mo | RAM libre=${freeMemory} Go`);
+                        }
                     }
 
                     if (phaseDuration >= PATCH_HELP_DELAY && !phaseHelpDisplayed) {
                         phaseHelpDisplayed = true;
                         appendLaunchLog(launchLogPath, 'WATCHDOG', `${activePhaseLabel} sans fin après ${elapsedMinutes} minutes.`);
+                        appendJavaProcessSnapshot(launchLogPath);
                         new popup().openPopup({
                             title: 'Traitement anormalement long',
                             content: `Le traitement est toujours actif. Ne relancez pas Minecraft tant qu'un processus Java est en cours. Le diagnostic a été enregistré dans :\n${launchLogPath}`,
                             color: '#e6a23c',
-                            options: true
+                            options: true,
+                            openPath: launchLogPath
                         });
                     }
                 }, 15000);
             };
 
+            appendLaunchLog(launchLogPath, 'SESSION', '------------------------------------------------------------');
             appendLaunchLog(launchLogPath, 'START', `${options.name} - Minecraft ${loaderConfig.minecraft_version} - ${loaderConfig.loadder_type} ${loaderConfig.loadder_version}`);
+            appendLaunchLog(launchLogPath, 'LAUNCHER', `${pkg.version} | Electron ${process.versions.electron} | Node ${process.versions.node}`);
+            appendLaunchLog(launchLogPath, 'SYSTEM', `${process.platform} ${process.arch} | ${os.cpus().length} CPU | RAM ${Math.round(os.freemem() / 1073741824)}/${Math.round(os.totalmem() / 1073741824)} Go libre`);
+            appendLaunchLog(launchLogPath, 'PATH', `Racine : ${instancePath}`);
+            appendLaunchLog(launchLogPath, 'CONFIG', `verify=${Boolean(options.verify)} | téléchargements=${configClient.launcher_config.download_multi} | mémoire=${configClient.java_config.java_memory.min}-${configClient.java_config.java_memory.max} Go | Java=${configClient.java_config.java_path || 'runtime intégré'}`);
+            appendLaunchLog(launchLogPath, 'ACCOUNT', `${authenticator?.name || 'inconnu'} | type=${authenticator?.meta?.type || 'inconnu'} | jetons volontairement masqués`);
+            appendLaunchLog(launchLogPath, 'REMOTE', options.url || 'manifest Mojang');
 
             let opt = {
                 url: options.url,
@@ -448,6 +521,7 @@ class Home {
             playInstanceBTN.style.display = "none"
             infoStartingBOX.style.display = "block"
             progressBar.style.display = "";
+            setLaunchStage('Préparation du lancement...', `Chargement de ${options.name} avec ${loaderLabel} ${loaderConfig.loadder_version}`);
             profileSwitchBTN?.style.setProperty('visibility', 'hidden');
             profileSwitchBTN?.style.setProperty('pointer-events', 'none');
             ipcRenderer.send('main-window-progress-load')
@@ -455,24 +529,29 @@ class Home {
             launch.on('extract', extract => {
                 ipcRenderer.send('main-window-progress-load')
                 noteLaunchActivity('EXTRACT', extract);
+                setLaunchStage('Extraction des fichiers...', extract);
                 console.log(extract);
             });
 
-            launch.on('progress', (progress, size) => {
-                stopPhaseWatchdog();
-                appendLaunchLog(launchLogPath, 'DOWNLOAD', `${progress}/${size}`);
-                infoStarting.textContent = `Téléchargement ${((progress / size) * 100).toFixed(0)}%`
+            launch.on('progress', (progress, size, element) => {
+                stopPhaseWatchdog('téléchargement');
+                const percentage = size > 0 ? ((progress / size) * 100).toFixed(0) : 0;
+                appendLaunchLog(launchLogPath, 'DOWNLOAD', `${progress}/${size} (${percentage}%) | ${element || 'fichier non précisé'}`);
+                setLaunchStage(`Téléchargement ${percentage}%`, element ? `Fichier : ${element}` : `${progress} / ${size} octets`);
                 ipcRenderer.send('main-window-progress', { progress, size })
                 progressBar.value = progress;
                 progressBar.max = size;
             });
 
-            launch.on('check', (progress, size) => {
-                stopPhaseWatchdog();
+            launch.on('check', (progress, size, element) => {
+                stopPhaseWatchdog('vérification');
                 const checkedFiles = Math.min(Number(progress) + 1, Number(size));
                 const percentage = size > 0 ? ((checkedFiles / size) * 100).toFixed(0) : 100;
-                appendLaunchLog(launchLogPath, 'CHECK', `${checkedFiles}/${size}`);
-                infoStarting.textContent = checkedFiles >= size ? `Finalisation du lancement...` : `Vérification ${percentage}%`
+                appendLaunchLog(launchLogPath, 'CHECK', `${checkedFiles}/${size} (${percentage}%) | ${element || 'bibliothèques'}`);
+                setLaunchStage(
+                    checkedFiles >= size ? 'Finalisation du lancement...' : `Vérification ${percentage}%`,
+                    checkedFiles >= size ? `Les ${size} éléments sont contrôlés, préparation de ${loaderLabel}` : `${element || 'Bibliothèques'} : ${checkedFiles}/${size}`
+                );
                 ipcRenderer.send('main-window-progress', { progress: checkedFiles, size })
                 progressBar.value = checkedFiles;
                 progressBar.max = size;
@@ -483,10 +562,13 @@ class Home {
                 let hours = Math.floor(time / 3600);
                 let minutes = Math.floor((time - hours * 3600) / 60);
                 let seconds = Math.floor(time - hours * 3600 - minutes * 60);
+                appendLaunchLog(launchLogPath, 'ESTIMATED', `${hours}h ${minutes}m ${seconds}s`);
+                launchStageDetail.textContent = `Temps restant estimé : ${hours ? `${hours} h ` : ''}${minutes ? `${minutes} min ` : ''}${seconds} s`;
                 console.log(`${hours}h ${minutes}m ${seconds}s`);
             })
 
             launch.on('speed', (speed) => {
+                appendLaunchLog(launchLogPath, 'SPEED', `${(speed / 1067008).toFixed(2)} Mb/s`);
                 console.log(`${(speed / 1067008).toFixed(2)} Mb/s`)
             })
 
@@ -495,11 +577,11 @@ class Home {
                 noteLaunchActivity('PATCH', patch);
                 console.log(patch);
                 ipcRenderer.send('main-window-progress-load')
-                infoStarting.textContent = `Patch ${loaderLabel} en cours...`
+                setLaunchStage(`Patch ${loaderLabel} en cours...`, stageDetail(patch, 'Exécution du patch Java'));
             });
 
             launch.on('data', (e) => {
-                stopPhaseWatchdog();
+                stopPhaseWatchdog('Minecraft démarré');
                 appendLaunchLog(launchLogPath, 'MINECRAFT', e);
                 progressBar.style.display = "none"
                 if (configClient.launcher_config.closeLauncher == 'close-launcher') {
@@ -507,13 +589,13 @@ class Home {
                 };
                 new logger('Minecraft', '#36b030');
                 ipcRenderer.send('main-window-progress-load')
-                infoStarting.textContent = `Demarrage en cours...`
+                setLaunchStage('Démarrage en cours...', 'Le processus Minecraft a été créé');
                 console.log(e);
             })
 
             launch.on('close', code => {
-                stopPhaseWatchdog();
-                appendLaunchLog(launchLogPath, 'CLOSE', code);
+                stopPhaseWatchdog('processus terminé');
+                appendLaunchLog(launchLogPath, 'CLOSE', `code=${code} | durée totale=${formatElapsedTime(Date.now() - launchStartedAt)}`);
                 if (configClient.launcher_config.closeLauncher == 'close-launcher') {
                     ipcRenderer.send("main-window-show")
                 };
@@ -523,21 +605,23 @@ class Home {
                 profileSwitchBTN?.style.removeProperty('visibility');
                 profileSwitchBTN?.style.removeProperty('pointer-events');
                 infoStarting.textContent = `Vérification`
+                launchStageDetail.textContent = 'Prêt à relancer';
                 new logger(pkg.name, '#7289da');
                 console.log('Close');
             });
 
             launch.on('error', err => {
-                stopPhaseWatchdog();
+                stopPhaseWatchdog('erreur');
                 const errorMessage = formatLaunchError(err);
-                appendLaunchLog(launchLogPath, 'ERROR', errorMessage);
+                appendLaunchLog(launchLogPath, 'ERROR', `${errorMessage}${err?.stack ? `\n${err.stack}` : ''}`);
                 let popupError = new popup()
 
                 popupError.openPopup({
                     title: 'Erreur',
                     content: `${errorMessage}\n\nJournal : ${launchLogPath}`,
                     color: 'red',
-                    options: true
+                    options: true,
+                    openPath: launchLogPath
                 })
 
                 if (configClient.launcher_config.closeLauncher == 'close-launcher') {
@@ -549,18 +633,23 @@ class Home {
                 profileSwitchBTN?.style.removeProperty('visibility');
                 profileSwitchBTN?.style.removeProperty('pointer-events');
                 infoStarting.textContent = `Vérification`
+                launchStageDetail.textContent = 'Le lancement a échoué';
                 new logger(pkg.name, '#7289da');
                 console.log(err);
             });
 
+            appendLaunchLog(launchLogPath, 'DISPATCH', 'Transmission de la configuration au cœur Minecraft.');
             launch.Launch(opt);
         } catch (err) {
+            const errorMessage = formatLaunchError(err);
+            if (launchLogPath) appendLaunchLog(launchLogPath, 'FATAL', `${errorMessage}${err?.stack ? `\n${err.stack}` : ''}`);
             let popupError = new popup();
             popupError.openPopup({
                 title: 'Erreur',
-                content: err?.error || err?.message || 'Impossible de charger le profil.',
+                content: launchLogPath ? `${errorMessage}\n\nJournal : ${launchLogPath}` : errorMessage,
                 color: 'red',
-                options: true
+                options: true,
+                openPath: launchLogPath
             })
             ipcRenderer.send('main-window-progress-reset')
             infoStartingBOX.style.display = "none"
@@ -568,6 +657,7 @@ class Home {
             profileSwitchBTN?.style.removeProperty('visibility');
             profileSwitchBTN?.style.removeProperty('pointer-events');
             infoStarting.textContent = `Vérification`
+            launchStageDetail.textContent = 'Le lancement a échoué';
             console.error(err);
         }
     }
