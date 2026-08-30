@@ -2,7 +2,7 @@ const fs = require("fs");
 
 const builder = require('electron-builder')
 const JavaScriptObfuscator = require('javascript-obfuscator');
-const nodeFetch = require('node-fetch')
+const nodeFetch = require('node-fetch').default;
 const png2icons = require('png2icons');
 const Jimp = require('jimp');
 
@@ -152,14 +152,14 @@ class Index {
     }
 
     async iconSet(url) {
-        let Buffer = await nodeFetch(url)
-        if (Buffer.status == 200) {
-            Buffer = await Buffer.buffer()
-            const image = await Jimp.read(Buffer);
-            Buffer = await image.resize(256, 256).getBufferAsync(Jimp.MIME_PNG)
-            fs.writeFileSync("src/assets/images/icon.icns", png2icons.createICNS(Buffer, png2icons.BILINEAR, 0));
-            fs.writeFileSync("src/assets/images/icon.ico", png2icons.createICO(Buffer, png2icons.HERMITE, 0, false));
-            fs.writeFileSync("src/assets/images/icon.png", Buffer);
+        const response = await nodeFetch(url)
+        if (response.ok) {
+            const sourceBuffer = Buffer.from(await response.arrayBuffer());
+            const image = await Jimp.read(sourceBuffer);
+            const iconBuffer = await image.resize(256, 256).getBufferAsync(Jimp.MIME_PNG)
+            fs.writeFileSync("src/assets/images/icon.icns", png2icons.createICNS(iconBuffer, png2icons.BILINEAR, 0));
+            fs.writeFileSync("src/assets/images/icon.ico", png2icons.createICO(iconBuffer, png2icons.HERMITE, 0, false));
+            fs.writeFileSync("src/assets/images/icon.png", iconBuffer);
             console.log('new icon set')
         } else {
             console.log('connection error')

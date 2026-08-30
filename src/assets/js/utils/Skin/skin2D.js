@@ -2,7 +2,8 @@
  * @author Luuxis
  * Luuxis License v1.0 (voir fichier LICENSE pour les détails en FR/EN)
  */
-const nodeFetch = require('node-fetch')
+
+const nodeFetch = require('node-fetch').default;
 
 export class skin2D {
     async creatHeadTexture(data) {

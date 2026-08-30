@@ -7,7 +7,7 @@ const { ipcRenderer, shell } = require('electron');
 const pkg = require('../package.json');
 const os = require('os');
 import { config } from './utils.js';
-const nodeFetch = require("node-fetch");
+const nodeFetch = require('node-fetch').default;
 
 
 class Splash {
