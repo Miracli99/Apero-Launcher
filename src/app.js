@@ -9,6 +9,8 @@ const { autoUpdater } = require('electron-updater')
 
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
+const Store = require('electron-store');
 
 const UpdateWindow = require("./assets/js/windows/updateWindow.js");
 const MainWindow = require("./assets/js/windows/mainWindow.js");
@@ -23,6 +25,82 @@ if (dev) {
     app.setPath('userData', appPath);
     app.setPath('appData', appdata)
 }
+
+function getEncryptionKey(userDataPath) {
+    if (dev) return undefined;
+
+    const keyPath = path.join(userDataPath, 'key.txt');
+    if (fs.existsSync(keyPath)) return fs.readFileSync(keyPath, 'utf8').trim();
+
+    const key = crypto.randomBytes(32).toString('hex');
+    fs.mkdirSync(userDataPath, { recursive: true });
+    fs.writeFileSync(keyPath, key, { encoding: 'utf8', mode: 0o600 });
+    return key;
+}
+
+const userDataPath = app.getPath('userData');
+const launcherStore = new Store({
+    name: 'launcher-data',
+    cwd: userDataPath,
+    encryptionKey: getEncryptionKey(userDataPath)
+});
+
+function getTable(tableName) {
+    const table = launcherStore.get(tableName, []);
+    return Array.isArray(table) ? table : [];
+}
+
+if (!getTable('configClient').length) {
+    launcherStore.set('configClient', [{
+        ID: 1,
+        account_selected: null,
+        instance_select: null,
+        java_config: {
+            java_path: null,
+            java_memory: { min: 2, max: 4 }
+        },
+        game_config: {
+            screen_size: { width: 854, height: 480 }
+        },
+        launcher_config: {
+            download_multi: 5,
+            visualTheme: 'beer',
+            closeLauncher: 'close-launcher',
+            intelEnabledMac: true
+        }
+    }]);
+}
+
+ipcMain.handle('data-create', (_, tableName, data) => {
+    const table = getTable(tableName);
+    const nextId = table.reduce((max, item) => Math.max(max, Number(item.ID) || 0), 0) + 1;
+    const savedData = { ...data, ID: nextId };
+    table.push(savedData);
+    launcherStore.set(tableName, table);
+    return savedData;
+});
+
+ipcMain.handle('data-read', (_, tableName, key = 1) => {
+    return getTable(tableName).find(item => item.ID === key);
+});
+
+ipcMain.handle('data-read-all', (_, tableName) => getTable(tableName));
+
+ipcMain.handle('data-update', (_, tableName, data, key = 1) => {
+    const table = getTable(tableName);
+    const savedData = { ...data, ID: key };
+    const index = table.findIndex(item => item.ID === key);
+
+    if (index === -1) table.push(savedData);
+    else table[index] = savedData;
+
+    launcherStore.set(tableName, table);
+    return savedData;
+});
+
+ipcMain.handle('data-delete', (_, tableName, key = 1) => {
+    launcherStore.set(tableName, getTable(tableName).filter(item => item.ID !== key));
+});
 
 if (!app.requestSingleInstanceLock()) app.quit();
 else app.whenReady().then(() => {

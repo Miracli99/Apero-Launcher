@@ -1,7 +1,7 @@
 {
     "name": "BelleBitt-Launcher",
     "productName": "BelleBit Launcher",
-    "version": "2.0.22",
+    "version": "2.0.23",
     "description": "Launcher Minecraft pour le serveur BelleBitt",
     "main": "src/app.js",
     "author": {
@@ -24,9 +24,9 @@
     },
     "dependencies": {
         "cross-env-shell": "^7.0.3",
+        "electron-store": "^8.2.0",
         "electron-updater": "^6.8.9",
         "minecraft-java-core": "^4.2.9",
-        "node-bdd": "^2.0.4",
         "node-fetch": "^3.3.2",
         "xml-js": "^1.6.11"
     },

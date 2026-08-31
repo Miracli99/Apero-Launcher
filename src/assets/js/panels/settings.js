@@ -145,7 +145,7 @@ class Settings {
 
         if (totalMem < ram.ramMin) {
             config.java_config.java_memory = { min: 1, max: 2 };
-            this.db.updateData('configClient', config);
+            await this.db.updateData('configClient', config);
             ram = { ramMin: "1", ramMax: "2" }
         };
 
@@ -162,7 +162,7 @@ class Settings {
             minSpan.setAttribute("value", `${min} Go`);
             maxSpan.setAttribute("value", `${max} Go`);
             config.java_config.java_memory = { min: min, max: max };
-            this.db.updateData('configClient', config);
+            await this.db.updateData('configClient', config);
         });
     }
 

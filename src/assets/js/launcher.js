@@ -24,6 +24,13 @@ function getAccountErrorMessage(error) {
     return getAccountErrorMessage(error.errorMessage || error.message || error.error);
 }
 
+function isTransientAccountError(error) {
+    if (error instanceof Error || error?.errorType === 'network') return true;
+
+    const message = getAccountErrorMessage(error).toLowerCase();
+    return ['fetch', 'network', 'timeout', 'econn', 'enotfound', 'socket'].some(term => message.includes(term));
+}
+
 async function refreshMicrosoftAccount(account, configuredClientId) {
     const storedClientId = account.meta?.client_id;
     const candidateClientIds = storedClientId
@@ -132,7 +139,7 @@ class Launcher {
         if (!configClient) {
             await this.db.createData('configClient', {
                 account_selected: null,
-                instance_selct: null,
+                instance_select: null,
                 java_config: {
                     java_path: null,
                     java_memory: {
@@ -200,6 +207,19 @@ class Launcher {
 
                     if (refreshResult.error) {
                         const errorMessage = getAccountErrorMessage(refreshResult.error);
+                        if (isTransientAccountError(refreshResult.error)) {
+                            account.meta = {
+                                ...account.meta,
+                                refresh_error: errorMessage
+                            };
+                            delete account.meta.requires_reauth;
+                            await this.db.updateData('accounts', account, account_ID);
+                            await addAccount(account);
+                            if (account_ID == account_selected) accountSelect(account);
+                            console.warn(`[Account] Renouvellement différé pour ${account.name}: ${errorMessage}`);
+                            continue;
+                        }
+
                         account.meta = {
                             ...account.meta,
                             requires_reauth: true,
